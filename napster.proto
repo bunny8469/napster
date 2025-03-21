@@ -1,0 +1,12 @@
+syntax = "proto3";
+package napster;
+
+option go_package = "./napster";
+
+service Central {
+    
+}
+
+service Peer {
+
+}
