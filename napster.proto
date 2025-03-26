@@ -1,12 +1,52 @@
 syntax = "proto3";
+
 package napster;
+option go_package = "./";
 
-option go_package = "./napster";
-
-service Central {
-    
+service CentralServer {
+    rpc RegisterPeer(RegisterRequest) returns (RegisterResponse);
+    rpc SearchFile(SearchRequest) returns (SearchResponse);
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
 }
 
-service Peer {
+service PeerService {
+    rpc RequestFile(FileRequest) returns (FileResponse);
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
 
+message RegisterRequest {
+    string peer_id = 1;
+    repeated string file_names = 2;
+    string peer_address = 3;
+    repeated string FilePaths = 4; // Updated: Now sends file paths, not chunk IDs
+    // repeated string ChunkIDs = 4; // Add this
+}
+
+message RegisterResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message SearchRequest {
+    string file_name = 1;
+    string ChunkID = 2; // Add this
+}
+
+message SearchResponse {
+    repeated string peer_addresses = 1;
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+    bool alive = 1;
+}
+
+message FileRequest {
+    string file_name = 1;
+    string peer_address = 2;
+}
+
+message FileResponse {
+    bytes file_data = 1;
 }
