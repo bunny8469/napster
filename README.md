@@ -20,6 +20,6 @@ Choose an option:
 3. Exit
 ```
 
-- On choosing 1 or 2 you will be asked for a file name to register or search, search returns the peers storing the file redundancy is also implemented.
+- On choosing 1 or 2 you will be asked for a file path to register or search, search returns the peers storing the file redundancy is also implemented.
 
 - Heartbeats are also implmented to make sure if the peer goes offline.

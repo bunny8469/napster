@@ -2,9 +2,17 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"flag"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
+	"math/rand"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -28,17 +36,55 @@ func NewCentralServer() *CentralServer {
 	}
 }
 
+// Compute SHA-256 checksum of a file
+func computeChecksum(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// Generate a random string for unique metadata filenames
+func randomString(n int) string {
+	letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
 
 // Peer registration with chunk-based storage and load balancing
 func (s *CentralServer) RegisterPeer(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+
+	s.peerStatus[req.PeerAddress] = true
+
+	if len(req.FilePaths) == 0 {
+		log.Printf("Peer %s registered and available for chunk storage.", req.PeerAddress)
+		return &pb.RegisterResponse{Success: true, Message: "Peer registered successfully with the server"}, nil
+	}
+	
 	availablePeers := []string{}
 	for peer := range s.peerStatus {
 		if s.peerStatus[peer] {
 			availablePeers = append(availablePeers, peer)
 		}
+	}
+	// If fewer than 3 peers are available, return an error to the client
+	if len(availablePeers) < 3 {
+		log.Printf("Not enough peers available. At least 3 required, found %d", len(availablePeers))
+		return &pb.RegisterResponse{Success: false, Message: "Not enough peers available to store the file"}, nil
 	}
 
 	// Distribute chunks among available peers
@@ -46,29 +92,46 @@ func (s *CentralServer) RegisterPeer(ctx context.Context, req *pb.RegisterReques
 		if _, exists := s.chunkIndex[filePath]; !exists {
 			s.chunkIndex[filePath] = []string{}
 		}
-		
+
 		// Store full file on multiple peers
 		for len(s.chunkIndex[filePath]) < s.replicationFactor && len(availablePeers) > 0 {
-			assignedPeer := availablePeers[len(s.chunkIndex[filePath]) % len(availablePeers)]
+			assignedPeer := availablePeers[len(s.chunkIndex[filePath])%len(availablePeers)]
 			if !contains(s.chunkIndex[filePath], assignedPeer) {
 				s.chunkIndex[filePath] = append(s.chunkIndex[filePath], assignedPeer)
 			}
 		}
-		
+		// Compute checksum
+		checksum, err := computeChecksum(filePath)
+		if err != nil {
+			log.Printf("Failed to compute checksum for %s: %v", filePath, err)
+			continue
+		}
+
+		// Save metadata to a unique JSON file
+		metadata := map[string]interface{}{
+			"file_path": filePath,
+			"peers":     s.chunkIndex[filePath],
+			"checksum":  checksum,
+		}
+		metadataFile := fmt.Sprintf("metadata_%s_%s.json", filePath, randomString(6))
+		fileData, _ := json.MarshalIndent(metadata, "", "  ")
+		ioutil.WriteFile(metadataFile, fileData, 0644)
+
+		log.Printf("Metadata stored in %s", metadataFile)
 	}
 
-	s.peerStatus[req.PeerAddress] = true
+	// s.peerStatus[req.PeerAddress] = true
 
-	if len(req.FilePaths) == 0  {
-		log.Printf("Peer %s registered and available for chunk storage.", req.PeerAddress)
-	}
+	// if len(req.FilePaths) == 0 {
+	// 	log.Printf("Peer %s registered and available for chunk storage.", req.PeerAddress)
+	// }
 
 	// Print chunk distribution details
-	for chunk, peers := range s.chunkIndex {
-		log.Printf("Chunk: %s is held by peers: %v", chunk, peers)
+	for _, filePath := range req.FilePaths {
+		log.Printf("File: %s is now held by peers: %v", filePath, s.chunkIndex[filePath])
 	}
 
-	return &pb.RegisterResponse{Success: true, Message: "Chunks registered with redundancy"}, nil
+	return &pb.RegisterResponse{Success: true, Message: "File registered with redundancy"}, nil
 }
 
 // Helper function to check if a slice contains a value
@@ -91,25 +154,12 @@ func (s *CentralServer) SearchFile(ctx context.Context, req *pb.SearchRequest) (
 	if found {
 		return &pb.SearchResponse{PeerAddresses: peers}, nil
 	}
-	
+
 	if len(peers) == 0 {
 		return &pb.SearchResponse{PeerAddresses: []string{}}, nil
 	}
 
 	return &pb.SearchResponse{PeerAddresses: peers}, nil
-}
-
-// Search for a chunk and return all available peers
-func (s *CentralServer) SearchChunk(ctx context.Context, req *pb.SearchRequest) (*pb.SearchResponse, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	peers, found := s.chunkIndex[req.ChunkID]
-	if !found || len(peers) == 0 {
-		return &pb.SearchResponse{PeerAddresses: []string{}}, nil
-	}
-
-	return &pb.SearchResponse{PeerAddresses: peers}, nil // Return all peers storing the chunk
 }
 
 // Periodically check peer health and update status
@@ -125,9 +175,10 @@ func (s *CentralServer) MonitorPeers() {
 			}
 		}
 		s.mu.Unlock()
-		time.Sleep(10 * time.Second) // Check every 10 seconds
+		time.Sleep(5 * time.Second) // Check every 10 seconds
 	}
 }
+
 
 // Check if a peer is responsive
 func (s *CentralServer) CheckPeerHealth(peerAddr string) bool {

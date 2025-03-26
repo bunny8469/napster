@@ -439,12 +439,13 @@ const file_napster_proto_rawDesc = "" +
 	"\tfile_name\x18\x01 \x01(\tR\bfileName\x12!\n" +
 	"\fpeer_address\x18\x02 \x01(\tR\vpeerAddress\"+\n" +
 	"\fFileResponse\x12\x1b\n" +
-	"\tfile_data\x18\x01 \x01(\fR\bfileData2\xdd\x01\n" +
+	"\tfile_data\x18\x01 \x01(\fR\bfileData2\xad\x02\n" +
 	"\rCentralServer\x12C\n" +
 	"\fRegisterPeer\x12\x18.napster.RegisterRequest\x1a\x19.napster.RegisterResponse\x12=\n" +
 	"\n" +
 	"SearchFile\x12\x16.napster.SearchRequest\x1a\x17.napster.SearchResponse\x12H\n" +
-	"\vHealthCheck\x12\x1b.napster.HealthCheckRequest\x1a\x1c.napster.HealthCheckResponse2\x93\x01\n" +
+	"\vHealthCheck\x12\x1b.napster.HealthCheckRequest\x1a\x1c.napster.HealthCheckResponse\x12N\n" +
+	"\x11HealthCheckServer\x12\x1b.napster.HealthCheckRequest\x1a\x1c.napster.HealthCheckResponse2\x93\x01\n" +
 	"\vPeerService\x12:\n" +
 	"\vRequestFile\x12\x14.napster.FileRequest\x1a\x15.napster.FileResponse\x12H\n" +
 	"\vHealthCheck\x12\x1b.napster.HealthCheckRequest\x1a\x1c.napster.HealthCheckResponseB\x04Z\x02./b\x06proto3"
@@ -476,15 +477,17 @@ var file_napster_proto_depIdxs = []int32{
 	0, // 0: napster.CentralServer.RegisterPeer:input_type -> napster.RegisterRequest
 	2, // 1: napster.CentralServer.SearchFile:input_type -> napster.SearchRequest
 	4, // 2: napster.CentralServer.HealthCheck:input_type -> napster.HealthCheckRequest
-	6, // 3: napster.PeerService.RequestFile:input_type -> napster.FileRequest
-	4, // 4: napster.PeerService.HealthCheck:input_type -> napster.HealthCheckRequest
-	1, // 5: napster.CentralServer.RegisterPeer:output_type -> napster.RegisterResponse
-	3, // 6: napster.CentralServer.SearchFile:output_type -> napster.SearchResponse
-	5, // 7: napster.CentralServer.HealthCheck:output_type -> napster.HealthCheckResponse
-	7, // 8: napster.PeerService.RequestFile:output_type -> napster.FileResponse
-	5, // 9: napster.PeerService.HealthCheck:output_type -> napster.HealthCheckResponse
-	5, // [5:10] is the sub-list for method output_type
-	0, // [0:5] is the sub-list for method input_type
+	4, // 3: napster.CentralServer.HealthCheckServer:input_type -> napster.HealthCheckRequest
+	6, // 4: napster.PeerService.RequestFile:input_type -> napster.FileRequest
+	4, // 5: napster.PeerService.HealthCheck:input_type -> napster.HealthCheckRequest
+	1, // 6: napster.CentralServer.RegisterPeer:output_type -> napster.RegisterResponse
+	3, // 7: napster.CentralServer.SearchFile:output_type -> napster.SearchResponse
+	5, // 8: napster.CentralServer.HealthCheck:output_type -> napster.HealthCheckResponse
+	5, // 9: napster.CentralServer.HealthCheckServer:output_type -> napster.HealthCheckResponse
+	7, // 10: napster.PeerService.RequestFile:output_type -> napster.FileResponse
+	5, // 11: napster.PeerService.HealthCheck:output_type -> napster.HealthCheckResponse
+	6, // [6:12] is the sub-list for method output_type
+	0, // [0:6] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name

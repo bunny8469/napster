@@ -43,6 +43,7 @@ func (p *PeerServer) HealthCheck(ctx context.Context, req *pb.HealthCheckRequest
 	return &pb.HealthCheckResponse{Alive: true}, nil
 }
 
+
 // Start peer's gRPC server
 func startPeerServer(peerAddress string, files map[string]string) {
 	listener, err := net.Listen("tcp", peerAddress)
@@ -71,12 +72,18 @@ func registerFilesWithServer(serverAddr, peerAddress string, files map[string]st
 		filePaths = append(filePaths, filePath)
 	}
 
-	_, err = client.RegisterPeer(context.Background(), &pb.RegisterRequest{
+	res, err := client.RegisterPeer(context.Background(), &pb.RegisterRequest{
 		PeerAddress: peerAddress,
-		FilePaths:   filePaths, // Send file paths instead of chunk IDs
+		FilePaths:   filePaths,
 	})
+
 	if err != nil {
 		log.Fatalf("Failed to register: %v", err)
+	}
+
+	if !res.Success {
+		fmt.Println("Registration failed:", res.Message)
+		return
 	}
 
 	fmt.Println("Chunks registered successfully!")
