@@ -23,6 +23,7 @@ const (
 	CentralServer_SearchFile_FullMethodName        = "/napster.CentralServer/SearchFile"
 	CentralServer_HealthCheck_FullMethodName       = "/napster.CentralServer/HealthCheck"
 	CentralServer_HealthCheckServer_FullMethodName = "/napster.CentralServer/HealthCheckServer"
+	CentralServer_GenerateTorrent_FullMethodName   = "/napster.CentralServer/GenerateTorrent"
 )
 
 // CentralServerClient is the client API for CentralServer service.
@@ -33,6 +34,8 @@ type CentralServerClient interface {
 	SearchFile(ctx context.Context, in *SearchRequest, opts ...grpc.CallOption) (*SearchResponse, error)
 	HealthCheck(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckResponse, error)
 	HealthCheckServer(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckResponse, error)
+	// New RPC for torrent-generation (chunking flow)
+	GenerateTorrent(ctx context.Context, in *TorrentRequest, opts ...grpc.CallOption) (*TorrentResponse, error)
 }
 
 type centralServerClient struct {
@@ -83,6 +86,16 @@ func (c *centralServerClient) HealthCheckServer(ctx context.Context, in *HealthC
 	return out, nil
 }
 
+func (c *centralServerClient) GenerateTorrent(ctx context.Context, in *TorrentRequest, opts ...grpc.CallOption) (*TorrentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TorrentResponse)
+	err := c.cc.Invoke(ctx, CentralServer_GenerateTorrent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CentralServerServer is the server API for CentralServer service.
 // All implementations must embed UnimplementedCentralServerServer
 // for forward compatibility.
@@ -91,6 +104,8 @@ type CentralServerServer interface {
 	SearchFile(context.Context, *SearchRequest) (*SearchResponse, error)
 	HealthCheck(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error)
 	HealthCheckServer(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error)
+	// New RPC for torrent-generation (chunking flow)
+	GenerateTorrent(context.Context, *TorrentRequest) (*TorrentResponse, error)
 	mustEmbedUnimplementedCentralServerServer()
 }
 
@@ -112,6 +127,9 @@ func (UnimplementedCentralServerServer) HealthCheck(context.Context, *HealthChec
 }
 func (UnimplementedCentralServerServer) HealthCheckServer(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method HealthCheckServer not implemented")
+}
+func (UnimplementedCentralServerServer) GenerateTorrent(context.Context, *TorrentRequest) (*TorrentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GenerateTorrent not implemented")
 }
 func (UnimplementedCentralServerServer) mustEmbedUnimplementedCentralServerServer() {}
 func (UnimplementedCentralServerServer) testEmbeddedByValue()                       {}
@@ -206,6 +224,24 @@ func _CentralServer_HealthCheckServer_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CentralServer_GenerateTorrent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TorrentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CentralServerServer).GenerateTorrent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CentralServer_GenerateTorrent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CentralServerServer).GenerateTorrent(ctx, req.(*TorrentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CentralServer_ServiceDesc is the grpc.ServiceDesc for CentralServer service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -228,6 +264,10 @@ var CentralServer_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "HealthCheckServer",
 			Handler:    _CentralServer_HealthCheckServer_Handler,
+		},
+		{
+			MethodName: "GenerateTorrent",
+			Handler:    _CentralServer_GenerateTorrent_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

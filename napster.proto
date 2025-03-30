@@ -8,6 +8,8 @@ service CentralServer {
     rpc SearchFile(SearchRequest) returns (SearchResponse);
     rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
     rpc HealthCheckServer(HealthCheckRequest) returns (HealthCheckResponse);
+    // New RPC for torrent-generation (chunking flow)
+    rpc GenerateTorrent(TorrentRequest) returns (TorrentResponse);
 }
 
 service PeerService {
@@ -19,18 +21,18 @@ message RegisterRequest {
     string peer_id = 1;
     repeated string file_names = 2;
     string peer_address = 3;
-    repeated string FilePaths = 4; // Updated: Now sends file paths, not chunk IDs
-    // repeated string ChunkIDs = 4; // Add this
+    repeated string FilePaths = 4; // Now sends file paths, not chunk IDs
 }
 
 message RegisterResponse {
     bool success = 1;
     string message = 2;
+    string RenamedFile = 3;
 }
 
 message SearchRequest {
     string file_name = 1;
-    string ChunkID = 2; // Add this
+    string ChunkID = 2;
 }
 
 message SearchResponse {
@@ -50,4 +52,26 @@ message FileRequest {
 
 message FileResponse {
     bytes file_data = 1;
+}
+
+// New messages for torrent generation
+
+message TorrentRequest {
+    string file_path = 1; // Full path of the file on the central server
+}
+
+message TorrentResponse {
+    bool success = 1;
+    string torrent_file_name = 2;
+    string message = 3;
+    TorrentMetadata metadata = 4;
+}
+
+message TorrentMetadata {
+    string file_name = 1;
+    int64 file_size = 2;
+    int32 chunk_size = 3;
+    string checksum = 4;
+    map<int32, string> chunk_checksums = 5;
+    repeated string peers = 6;
 }
