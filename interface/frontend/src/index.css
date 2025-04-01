@@ -1,3 +1,127 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html, body {
+  background-color: #0f0f0f;
+  color: #e0e0e0;
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+}
+
+/* Fix white space when dragging */
+html, body, main {
+  overscroll-behavior: none;
+}
+
+.slider-thumb-interactive {
+  cursor: grab !important;
+  width: 16px !important;
+  height: 16px !important;
+  background-color: #fff !important;
+  border: none !important;
+}
+
+.slider-thumb-interactive:hover {
+  transform: scale(1.2) !important;
+}
+
+.slider-track {
+  height: 4px !important;
+  background-color: #333 !important;
+}
+
+.slider-range {
+  background-color: #4a86e8 !important;
+  height: 4px !important;
+}
+
+/* Custom progress bar */
+.custom-progress-bar {
+  height: 4px;
+  background-color: #333;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.custom-progress-value {
+  height: 100%;
+  background-color: #4a86e8;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #4a86e8 #1a1a1a;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #2c5aa0;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #4a86e8;
+}
+
+/* Fixed height containers with scrolling */
+.fixed-height-container {
+  height: 400px;
+  overflow-y: auto;
+}
+
+.fixed-height-library {
+  height: 400px;
+  overflow-y: auto;
+}
+
+/* Song tile hover effect */
+.song-tile {
+  transition: all 0.2s ease;
+}
+
+.song-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Fixed scrollbar in table container */
+.table-fixed-scrollbar {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+body::-webkit-scrollbar{
+  display: none;
+}
+
+/* Proper container query implementation */
+.controls-container {
+  container-type: inline-size;
+  container-name: player-controls;
+}
+
+@container player-controls (width < 200px) {
+  .shuffle-btn, .repeat-btn {
+    display: none !important;
+  }
+}

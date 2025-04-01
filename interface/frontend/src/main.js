@@ -1,8 +1,5 @@
 import App from './App.svelte'
+import { mount } from 'svelte';
 import './index.css'
 
-const app = new App({
-  target: document.getElementById('app')
-})
-
-export default app
+mount(App, { target: document.body });

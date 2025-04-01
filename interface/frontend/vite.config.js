@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [svelte()],
   build: {
     rollupOptions: {
+      external: ['svelte-radix'],
       output: {
         entryFileNames: `assets/[name].js`,
         chunkFileNames: `assets/[name].js`,
