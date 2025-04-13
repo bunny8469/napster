@@ -28,6 +28,11 @@ Choose an option:
 3. Exit
 ```
 
+- To download Fuzzy Search:
+  ```
+  go get github.com/lithammer/fuzzysearch/fuzzy
+  ```
+
 - On choosing 1 or 2 you will be asked for a file path to register or search, search returns the peers storing the file redundancy is also implemented.
 
 - Heartbeats are also implmented to make sure if the peer goes offline.

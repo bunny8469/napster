@@ -20,14 +20,17 @@ import (
 	pb "napster"
 )
 
-// --- Existing PeerServer and Client Functions ---
+// ChunkSize is defined as 64KB.
+const ChunkSize = 65536
 
+// PeerServer implements the PeerService for serving file requests and health checks.
 type PeerServer struct {
 	pb.UnimplementedPeerServiceServer
 	peerAddress string
 	files       map[string]string // fileName -> filePath
 }
 
+// RequestFile reads and returns the requested file's data.
 func (p *PeerServer) RequestFile(ctx context.Context, req *pb.FileRequest) (*pb.FileResponse, error) {
 	filePath, exists := p.files[req.FileName]
 	if !exists {
@@ -40,10 +43,12 @@ func (p *PeerServer) RequestFile(ctx context.Context, req *pb.FileRequest) (*pb.
 	return &pb.FileResponse{FileData: data}, nil
 }
 
+// HealthCheck returns alive status.
 func (p *PeerServer) HealthCheck(ctx context.Context, req *pb.HealthCheckRequest) (*pb.HealthCheckResponse, error) {
 	return &pb.HealthCheckResponse{Alive: true}, nil
 }
 
+// startPeerServer starts a local gRPC server so that other peers can communicate with this peer.
 func startPeerServer(peerAddress string, files map[string]string) {
 	listener, err := net.Listen("tcp", peerAddress)
 	if err != nil {
@@ -52,122 +57,12 @@ func startPeerServer(peerAddress string, files map[string]string) {
 	server := grpc.NewServer()
 	pb.RegisterPeerServiceServer(server, &PeerServer{peerAddress: peerAddress, files: files})
 	log.Printf("Peer listening on %s...", peerAddress)
-	server.Serve(listener)
-}
-
-// createLocalChunks splits a local file into 64KB chunks and saves them in outputDir.
-func createLocalChunks(filePath, outputDir string) error {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return fmt.Errorf("error opening file for chunking: %v", err)
-	}
-	defer file.Close()
-
-	os.MkdirAll(outputDir, os.ModePerm)
-	buffer := make([]byte, 65536)
-	chunkIndex := 0
-	for {
-		bytesRead, readErr := file.Read(buffer)
-		if readErr != nil && readErr != io.EOF {
-			return readErr
-		}
-		if bytesRead == 0 {
-			break
-		}
-		chunkFileName := fmt.Sprintf("%s_chunk_%d.chunk", filepath.Base(filePath), chunkIndex)
-		chunkFilePath := filepath.Join(outputDir, chunkFileName)
-		err := os.WriteFile(chunkFilePath, buffer[:bytesRead], 0644)
-		if err != nil {
-			return err
-		}
-		chunkIndex++
-	}
-	log.Printf("Local chunks created for file %s in %s", filePath, outputDir)
-	return nil
-}
-
-// registerFilesWithServer sends file paths to the server and receives the renamed file name.
-// Then, the client renames its local file accordingly and creates local chunks.
-// registerFilesWithServer sends file paths to the server and receives the renamed file name.
-// Then, the client renames its local file accordingly (if it still exists) and creates local chunks.
-func registerFilesWithServer(serverAddr, peerAddress string, files map[string]string) {
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("Failed to connect to server: %v", err)
-	}
-	defer conn.Close()
-
-	client := pb.NewCentralServerClient(conn)
-	var filePaths []string
-	for _, filePath := range files {
-		filePaths = append(filePaths, filePath)
-	}
-	res, err := client.RegisterPeer(context.Background(), &pb.RegisterRequest{
-		PeerAddress: peerAddress,
-		FilePaths:   filePaths,
-	})
-	if err != nil {
-		log.Fatalf("Failed to register: %v", err)
-	}
-	if !res.Success {
-		fmt.Println("Registration failed:", res.Message)
-		return
-	}
-	renamedFile := res.RenamedFile
-	fmt.Println("Files registered successfully!")
-	fmt.Println("Renamed file on server:", renamedFile)
-
-	// Pick the first file from the map.
-	var originalFilePath string
-	for _, fp := range files {
-		originalFilePath = fp
-		break
-	}
-	localDir := filepath.Dir(originalFilePath)
-	newLocalFilePath := filepath.Join(localDir, renamedFile)
-
-	// Check if the original file exists.
-	if _, err := os.Stat(originalFilePath); err == nil {
-		// If it exists, rename it locally.
-		err = os.Rename(originalFilePath, newLocalFilePath)
-		if err != nil {
-			log.Fatalf("Error renaming local file: %v", err)
-		}
-		fmt.Println("Local file renamed to:", newLocalFilePath)
-	} else {
-		// If not, assume the file is already renamed.
-		fmt.Println("Original file not found, assuming already renamed.")
-	}
-
-	// Create local chunks from the renamed file.
-	err = createLocalChunks(newLocalFilePath, "./chunks")
-	if err != nil {
-		log.Fatalf("Error creating local chunks: %v", err)
+	if err := server.Serve(listener); err != nil {
+		log.Fatalf("Failed to serve: %v", err)
 	}
 }
 
-func searchFileOnServer(serverAddr string) {
-	fmt.Print("Enter file name to search: ")
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Scan()
-	fileName := scanner.Text()
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("Failed to connect to server: %v", err)
-	}
-	defer conn.Close()
-	client := pb.NewCentralServerClient(conn)
-	res, err := client.SearchFile(context.Background(), &pb.SearchRequest{FileName: fileName})
-	if err != nil {
-		log.Fatalf("Failed to search: %v", err)
-	}
-	if len(res.PeerAddresses) == 0 {
-		fmt.Println("No peers found with the file.")
-	} else {
-		fmt.Println("Peers with file:", res.PeerAddresses)
-	}
-}
-
+// registerPeerWithServer lets this peer register with the central server.
 func registerPeerWithServer(serverAddr, peerAddress string) {
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
@@ -177,7 +72,7 @@ func registerPeerWithServer(serverAddr, peerAddress string) {
 	client := pb.NewCentralServerClient(conn)
 	_, err = client.RegisterPeer(context.Background(), &pb.RegisterRequest{
 		PeerAddress: peerAddress,
-		FilePaths:   []string{},
+		FilePaths:   []string{}, // No file paths are provided during registration.
 	})
 	if err != nil {
 		log.Fatalf("Failed to register peer: %v", err)
@@ -185,9 +80,131 @@ func registerPeerWithServer(serverAddr, peerAddress string) {
 	fmt.Println("Peer registered successfully with the server!")
 }
 
-// --- New Rebuild (Merge) Functions ---
+// uploadFile streams the file to the central server chunk by chunk,
+// receives renamed file name from server, then saves chunks locally with the new name.
+func uploadFile(serverAddr, localFilePath string) {
+	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Failed to connect to server: %v", err)
+	}
+	defer conn.Close()
 
-// mergeChunks merges chunk files (with names like <base>_chunk_X.chunk) from chunksDir into outputFile.
+	client := pb.NewCentralServerClient(conn)
+
+	// Start the client-streaming RPC
+	stream, err := client.UploadFile(context.Background())
+	if err != nil {
+		log.Fatalf("Error starting upload: %v", err)
+	}
+
+	// Open the original file
+	file, err := os.Open(localFilePath)
+	if err != nil {
+		log.Fatalf("Error opening file: %v", err)
+	}
+	defer file.Close()
+
+	buffer := make([]byte, ChunkSize)
+	originalBaseName := filepath.Base(localFilePath)
+
+	// Send chunks to server
+	chunkIndex := 0
+	for {
+		bytesRead, err := file.Read(buffer)
+		if err != nil && err != io.EOF {
+			log.Fatalf("Error reading file: %v", err)
+		}
+		if bytesRead == 0 {
+			break
+		}
+
+		req := &pb.FileChunk{
+			FileName:  originalBaseName,
+			ChunkData: buffer[:bytesRead],
+		}
+		if err := stream.Send(req); err != nil {
+			log.Fatalf("Error sending chunk: %v", err)
+		}
+		chunkIndex++
+	}
+
+	// Close stream and receive final response
+	res, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatalf("Upload failed: %v", err)
+	}
+
+	fmt.Printf("Upload completed.\nRenamed file name: %s\nTorrent file: %s\n", res.RenamedFileName, res.TorrentFileName)
+
+	renamedFilePath := filepath.Join(filepath.Dir(localFilePath), res.RenamedFileName)
+	if localFilePath != renamedFilePath {
+		err = os.Rename(localFilePath, renamedFilePath)
+		if err != nil {
+			log.Fatalf("Failed to rename local file: %v", err)
+		}
+		fmt.Printf("Local file renamed to: %s\n", renamedFilePath)
+	}
+
+	file, err = os.Open(renamedFilePath)
+	if err != nil {
+		log.Fatalf("Failed to reopen renamed file: %v", err)
+	}
+	defer file.Close()
+	chunksDir := "./chunks"
+	os.MkdirAll(chunksDir, os.ModePerm)
+
+	chunkIndex = 0
+	for {
+		bytesRead, err := file.Read(buffer)
+		if err != nil && err != io.EOF {
+			log.Fatalf("Error reading renamed file: %v", err)
+		}
+		if bytesRead == 0 {
+			break
+		}
+		chunkFileName := fmt.Sprintf("%s_chunk_%d.chunk", res.RenamedFileName, chunkIndex)
+		chunkFilePath := filepath.Join(chunksDir, chunkFileName)
+		err = os.WriteFile(chunkFilePath, buffer[:bytesRead], 0644)
+		if err != nil {
+			log.Fatalf("Error writing chunk file %s: %v", chunkFileName, err)
+		}
+		chunkIndex++
+	}
+
+	fmt.Printf("Chunks stored locally as: %s_chunk_*.chunk in ./chunks/\n", res.RenamedFileName)
+}
+
+// searchFileOnServer queries the central server for peers storing the given file.
+func searchFileOnServer(serverAddr string) {
+	fmt.Print("Enter song or artist name to search: ")
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	query := scanner.Text()
+
+	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Failed to connect to server: %v", err)
+	}
+	defer conn.Close()
+	client := pb.NewCentralServerClient(conn)
+
+	res, err := client.SearchFile(context.Background(), &pb.SearchRequest{Query: query})
+	if err != nil {
+		log.Fatalf("Search failed: %v", err)
+	}
+
+	if len(res.Results) == 0 {
+		fmt.Println("No results found.")
+		return
+	}
+
+	fmt.Println("Matching songs:")
+	for _, song := range res.Results {
+		fmt.Printf("- Title: %s\n  Artist: %s\n  Created: %s\n  Peers: %v\n\n",
+			song.FileName, song.ArtistName, song.CreatedAt, song.PeerAddresses)
+	}
+}
+// mergeChunks merges locally stored chunk files into a single file.
 func mergeChunks(fileName, chunksDir, outputFile string) error {
 	pattern := filepath.Join(chunksDir, fmt.Sprintf("%s_chunk_*.chunk", fileName))
 	chunkFiles, err := filepath.Glob(pattern)
@@ -230,7 +247,7 @@ func mergeChunks(fileName, chunksDir, outputFile string) error {
 	return nil
 }
 
-// verifyFileChecksum computes the SHA-256 checksum of filePath and compares it with expectedChecksum.
+// verifyFileChecksum calculates the SHA-256 checksum of a file and compares it with the expected checksum.
 func verifyFileChecksum(filePath, expectedChecksum string) (bool, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -245,7 +262,7 @@ func verifyFileChecksum(filePath, expectedChecksum string) (bool, error) {
 	return computedChecksum == expectedChecksum, nil
 }
 
-// rebuildFile merges local chunks and verifies integrity using the expected checksum.
+// rebuildFile merges local chunk files and verifies integrity using the provided checksum.
 func rebuildFile(fileName, chunksDir, outputFile, expectedChecksum string) error {
 	if err := mergeChunks(fileName, chunksDir, outputFile); err != nil {
 		return fmt.Errorf("error merging chunks: %v", err)
@@ -260,7 +277,7 @@ func rebuildFile(fileName, chunksDir, outputFile, expectedChecksum string) error
 	return nil
 }
 
-// RebuildFileOption reads the torrent file to get the expected checksum and rebuilds the file.
+// rebuildFileOption reads a torrent file for the expected checksum and rebuilds the file using local chunks.
 func rebuildFileOption() {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print("Enter the base file name to rebuild (e.g., musix_randomXYu.mp3): ")
@@ -270,7 +287,6 @@ func rebuildFileOption() {
 	scanner.Scan()
 	outputFile := scanner.Text()
 
-	// Derive torrent file path from the base file name.
 	torrentFileName := strings.TrimSuffix(baseFileName, filepath.Ext(baseFileName)) + ".torrent"
 	torrentFilePath := filepath.Join("./torrents", torrentFileName)
 	data, err := os.ReadFile(torrentFilePath)
@@ -278,7 +294,7 @@ func rebuildFileOption() {
 		fmt.Println("Error reading torrent file:", err)
 		return
 	}
-	// Local struct for torrent metadata including artist and created_at.
+	// Local struct matching the torrent metadata.
 	type TorrentMetadata struct {
 		FileName       string            `json:"file_name"`
 		FileSize       int64             `json:"file_size"`
@@ -296,7 +312,6 @@ func rebuildFileOption() {
 		return
 	}
 	expectedChecksum := metadata.Checksum
-
 	err = rebuildFile(baseFileName, "./chunks", outputFile, expectedChecksum)
 	if err != nil {
 		fmt.Println("Error rebuilding file:", err)
@@ -305,24 +320,23 @@ func rebuildFileOption() {
 	}
 }
 
-// --- Main Function and Menu ---
-
 func main() {
 	serverAddr := flag.String("server", "localhost:50051", "Central server address")
 	peerPort := flag.String("port", "50054", "Port for peer server")
 	flag.Parse()
 
 	peerAddress := fmt.Sprintf("localhost:%s", *peerPort)
-	// Register the peer.
+	// Register this peer with the central server.
 	registerPeerWithServer(*serverAddr, peerAddress)
 
 	files := make(map[string]string)
+	// Start a peer server concurrently.
 	go startPeerServer(peerAddress, files)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
-		fmt.Println("\nChoose an option: ")
-		fmt.Println("1. Register Files")
+		fmt.Println("\nChoose an option:")
+		fmt.Println("1. Upload File")
 		fmt.Println("2. Search File")
 		fmt.Println("3. Rebuild File")
 		fmt.Println("4. Exit")
@@ -331,23 +345,10 @@ func main() {
 		choice := strings.TrimSpace(scanner.Text())
 		switch choice {
 		case "1":
-			fmt.Print("Enter file directory path: ")
+			fmt.Print("Enter full path of the file to upload: ")
 			scanner.Scan()
-			fileDir := scanner.Text()
-			err := filepath.Walk(fileDir, func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				if !info.IsDir() {
-					fileName := filepath.Base(path)
-					files[fileName] = path
-				}
-				return nil
-			})
-			if err != nil {
-				log.Fatalf("Error walking directory: %v", err)
-			}
-			registerFilesWithServer(*serverAddr, peerAddress, files)
+			localFilePath := scanner.Text()
+			uploadFile(*serverAddr, localFilePath)
 		case "2":
 			searchFileOnServer(*serverAddr)
 		case "3":

@@ -3,13 +3,27 @@ syntax = "proto3";
 package napster;
 option go_package = "./";
 
+// Request message for sending a file chunk.
+message FileChunk {
+  string file_name = 1;
+  bytes chunk_data = 2;
+  // Optionally add an int32 sequence_number = 3;
+}
+
+// Response after a file is completely streamed.
+message UploadResponse {
+  bool success = 1;
+  string torrent_file_name = 2;
+  string message = 3;
+  string renamed_file_name = 4;
+}
 service CentralServer {
     rpc RegisterPeer(RegisterRequest) returns (RegisterResponse);
     rpc SearchFile(SearchRequest) returns (SearchResponse);
     rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
     rpc HealthCheckServer(HealthCheckRequest) returns (HealthCheckResponse);
-    // New RPC for torrent-generation (chunking flow)
     rpc GenerateTorrent(TorrentRequest) returns (TorrentResponse);
+    rpc UploadFile(stream FileChunk) returns (UploadResponse);
 }
 
 service PeerService {
@@ -21,7 +35,7 @@ message RegisterRequest {
     string peer_id = 1;
     repeated string file_names = 2;
     string peer_address = 3;
-    repeated string FilePaths = 4; // Now sends file paths, not chunk IDs
+    repeated string FilePaths = 4;
 }
 
 message RegisterResponse {
@@ -31,14 +45,20 @@ message RegisterResponse {
 }
 
 message SearchRequest {
-    string file_name = 1;
-    string ChunkID = 2;
+    string query = 1;
+    // string ChunkID = 2;
+}
+
+message SongInfo {
+  string file_name = 1;
+  string artist_name = 2;
+  repeated string peer_addresses = 3;
+  string created_at = 4;
 }
 
 message SearchResponse {
-    repeated string peer_addresses = 1;
+  repeated SongInfo results = 1;
 }
-
 message HealthCheckRequest {}
 
 message HealthCheckResponse {
@@ -54,10 +74,8 @@ message FileResponse {
     bytes file_data = 1;
 }
 
-// New messages for torrent generation
-
 message TorrentRequest {
-    string file_path = 1; // Full path of the file on the central server
+    string file_path = 1;
 }
 
 message TorrentResponse {
@@ -74,4 +92,7 @@ message TorrentMetadata {
     string checksum = 4;
     map<int32, string> chunk_checksums = 5;
     repeated string peers = 6;
+    string artist_name = 7;
+    string created_at = 8;
+    int64 duration = 9;
 }
