@@ -167,7 +167,7 @@
         artist: torrent.Metadata.artist_name,
         genres: ["Unknown"], // or get from metadata if available
         currentTime: "0:00", // Placeholder or extract from metadata
-        duration: formatDuration(torrent.Metadata.Duration),
+        duration: formatDuration(torrent.Metadata.duration),
         isPlaying: true,
         progress: 0,
         size: formatFileSize(torrent.Metadata.file_size),
@@ -184,7 +184,7 @@
       Title: ${torrent.Metadata.file_name}
       Artist: ${torrent.Metadata.artist_name}
       File Size: ${formatFileSize(torrent.Metadata.file_size)}
-      Duration: ${formatDuration(torrent.Metadata.Duration)}
+      Duration: ${formatDuration(torrent.Metadata.duration)}
       Created: ${createdDate}
       Available Peers: ${torrent.Metadata.peers ? torrent.Metadata.peers.length : 0}
     `;

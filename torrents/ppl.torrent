@@ -1,0 +1,28 @@
+{
+  "file_name": "ppl.mp3",
+  "file_size": 3407872,
+  "chunk_size": 262144,
+  "checksum": "a430210a1ff3fb47ee1dd3209a0814dbb87eb4f0c2a5a7bf84f14b019e528146",
+  "chunk_checksums": {
+    "0": "e43905cd02a1ccdf8891ba6f7eb75cc178c430bb6267758005c813f9718c1f89",
+    "1": "5308fa75eaf2fd3a50d7274bd4dbcbf23a1690064c70a18ab01e9ce2a3055173",
+    "10": "8fee7f6b3ec59aaf9b5bb6268e0afea2c749794c90fa635e7e938946fe8e94bc",
+    "11": "cf3afbae19b7415df39f29e249d802c4061218f861ff576be8cbc9e09a269bce",
+    "12": "be7cbbbdd03e6af0788c7783f61cba0ced73236704c3a586ee2d38aa551ca856",
+    "2": "4f60e086045c67c02a68ed14c5708466767fc0d491785ea668bc88a6ac79cde6",
+    "3": "93f08b1857407e7bee656d87d7ddbb0aa43b9eaaab52909b53853c75f7c439b3",
+    "4": "d87c210c17a4ab0916df46e30a8ec8fa3f99d24ec38cc038e3bcd2be83214614",
+    "5": "4da83e2eedb69ecfb8565d86f5232eb78369904145a6278208e6d463781385a9",
+    "6": "a94c272e2b44469c4df747c25e68a02b8a6cb92efae6a60a6a5c47a4caa7cbc5",
+    "7": "0c7996d56ee43671897dcadef25877534c5d49f1dc3fedbc9aa5078ddbe91ac2",
+    "8": "53b9901233ed02c8832404664fe6a7a5d6e041af65b9db565e47c377e2fcc79f",
+    "9": "c2df2ed16908c763c8e8c44d0fcf0a3713ef9332d36f455f40dbb821f1323f9d"
+  },
+  "peers": [
+    "localhost:5003"
+  ],
+  "artist_name": "Sharwanand, Sai Pallavi",
+  "created_at": "2025-04-18T03:35:58+05:30",
+  "duration": 209,
+  "status": ""
+}

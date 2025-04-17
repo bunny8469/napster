@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
+	// "math/rand"
 	"net"
 	"os"
 	"path/filepath"
@@ -45,15 +45,15 @@ func NewCentralServer() *CentralServer {
 	}
 }
 
-// randomString generates a random alphanumeric string of length n.
-func randomString(n int) string {
-	letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
-}
+// // randomString generates a random alphanumeric string of length n.
+// func randomString(n int) string {
+// 	letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+// 	b := make([]byte, n)
+// 	for i := range b {
+// 		b[i] = letters[rand.Intn(len(letters))]
+// 	}
+// 	return string(b)
+// }
 
 // --- RegisterPeer ---
 // For each file in req.FilePaths, the server renames the file by appending a random suffix,
@@ -119,7 +119,8 @@ func (s *CentralServer) UploadFile(stream pb.CentralServer_UploadFileServer) err
 			metadata.ChunkSize = ChunkSize
 			metadata.ArtistName = req.AlbumArtist
 			metadata.Peers = []string{req.PeerAddress}
-
+			metadata.Duration = int64(req.Duration)
+			
 			if req.FileName == "" || req.PeerAddress == "" {
 				return stream.SendAndClose(&pb.UploadResponse{
 					Status:         301,
@@ -148,7 +149,7 @@ func (s *CentralServer) UploadFile(stream pb.CentralServer_UploadFileServer) err
 	// Finalize overall checksum and update metadata.
 	metadata.Checksum = hex.EncodeToString(sha256Hasher.Sum(nil))
 	metadata.CreatedAt = time.Now().Format(time.RFC3339)
-	metadata.Duration = int64(len(metadata.ChunkChecksums)) // Using number of chunks.
+	// metadata.Duration = int64(len( metadata.ChunkChecksums)) // Using number of chunks.
 	metadata.FileSize = int64(chunkIndex * ChunkSize) // Assuming all chunks are full size.
 	
 	// metadata.Peers = --- During loadbalancing, this will be filled with the list of peers.
@@ -197,60 +198,6 @@ func computeDataChecksum(data []byte) string {
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])
 }
-
-// // chunkFile virtually splits the file into chunks, computes per-chunk checksums,
-// // writes temporary chunk files, and returns the torrent metadata.
-// func chunkFile(filePath, outputDir string, peers []string) (*TorrentMetadata, error) {
-// 	file, err := os.Open(filePath)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer file.Close()
-
-// 	info, err := file.Stat()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	fmt.Printf("---------------------------------File size: %d bytes\n", info.Size())
-
-// 	metadata := &TorrentMetadata{
-// 		FileName:       filepath.Base(filePath),
-// 		FileSize:       info.Size(),
-// 		ChunkSize:      ChunkSize,
-// 		ChunkChecksums: make(map[int]string),
-// 		Peers:          peers,
-// 	}
-
-// 	os.MkdirAll(outputDir, os.ModePerm)
-
-// 	fullHash := sha256.New()
-// 	buffer := make([]byte, ChunkSize)
-// 	chunkIndex := 0
-// 	for {
-// 		bytesRead, readErr := file.Read(buffer)
-// 		if readErr != nil && readErr != io.EOF {
-// 			return nil, readErr
-// 		}
-// 		if bytesRead == 0 {
-// 			break
-// 		}
-// 		fullHash.Write(buffer[:bytesRead])
-// 		chunkData := buffer[:bytesRead]
-// 		checksum := computeDataChecksum(chunkData)
-// 		metadata.ChunkChecksums[chunkIndex] = checksum
-
-// 		// Write temporary chunk file.
-// 		chunkFileName := fmt.Sprintf("%s_chunk_%d.chunk", metadata.FileName, chunkIndex)
-// 		chunkFilePath := filepath.Join(outputDir, chunkFileName)
-// 		err = os.WriteFile(chunkFilePath, chunkData, 0644)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		chunkIndex++
-// 	}
-// 	metadata.Checksum = hex.EncodeToString(fullHash.Sum(nil))
-// 	return metadata, nil
-// }
 
 // generateTorrentFile writes the TorrentMetadata as a JSON file to outputDir and returns the file name.
 func generateTorrentFile(metadata *TorrentMetadata, outputDir string) (string, error) {

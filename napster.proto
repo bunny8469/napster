@@ -9,6 +9,7 @@ message FileChunk {
   string PeerAddress = 2;
   string albumArtist = 3;
   bytes chunk_data = 4;
+  int32 duration = 5;
 }
 
 // Response after a file is completely streamed.

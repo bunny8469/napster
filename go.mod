@@ -3,6 +3,7 @@ module napster
 go 1.22.0
 
 require (
+	github.com/tcolgate/mp3 v0.0.0-20170426193717-e79c5a46d300
 	github.com/wailsapp/wails/v2 v2.10.1
 	google.golang.org/grpc v1.71.1
 	google.golang.org/protobuf v1.36.6
