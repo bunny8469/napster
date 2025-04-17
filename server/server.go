@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
 	"net"
 	"os"
 	"path/filepath"
@@ -18,6 +17,7 @@ import (
 	"time"
 
 	"github.com/lithammer/fuzzysearch/fuzzy"
+	"github.com/stathat/consistent"
 
 	pb "napster"
 
@@ -30,11 +30,13 @@ var TORRENTS_DIR = "./torrents";
 // CentralServer holds the peer status and a mapping from original file path to peers.
 type CentralServer struct {
 	pb.UnimplementedCentralServerServer
-	mu                sync.Mutex
-	fileMap			  map[string]string
-	// chunkIndex        map[string][]string // mapping: original filePath -> list of peerAddresses
-	peerStatus        map[string]bool     // Peer health status
-	replicationFactor int                 // Number of replicas per file
+	mu                	sync.Mutex
+	fileMap			  	map[string]string
+	// chunkIndex       map[string][]string // mapping: original filePath -> list of peerAddresses
+	peerStatus        	map[string]bool     // Peer health status
+	replicationFactor 	int                 // Number of replicas per file
+	ContributorHashring *consistent.Consistent
+	cNodes				[]string
 }
 
 func NewCentralServer() *CentralServer {
@@ -42,17 +44,14 @@ func NewCentralServer() *CentralServer {
 		fileMap:        make(map[string]string),
 		peerStatus:        make(map[string]bool),
 		replicationFactor: 3,
+		ContributorHashring: consistent.New(),
 	}
 }
 
-// randomString generates a random alphanumeric string of length n.
-func randomString(n int) string {
-	letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
+func (s *CentralServer) RegisterContributor(ctx context.Context, req *pb.ContributorRequest) (*pb.GenResponse, error) {
+
+	s.ContributorHashring.Add(req.ContriAddr)
+	return &pb.GenResponse{}, nil
 }
 
 // --- RegisterPeer ---
@@ -198,60 +197,6 @@ func computeDataChecksum(data []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// // chunkFile virtually splits the file into chunks, computes per-chunk checksums,
-// // writes temporary chunk files, and returns the torrent metadata.
-// func chunkFile(filePath, outputDir string, peers []string) (*TorrentMetadata, error) {
-// 	file, err := os.Open(filePath)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer file.Close()
-
-// 	info, err := file.Stat()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	fmt.Printf("---------------------------------File size: %d bytes\n", info.Size())
-
-// 	metadata := &TorrentMetadata{
-// 		FileName:       filepath.Base(filePath),
-// 		FileSize:       info.Size(),
-// 		ChunkSize:      ChunkSize,
-// 		ChunkChecksums: make(map[int]string),
-// 		Peers:          peers,
-// 	}
-
-// 	os.MkdirAll(outputDir, os.ModePerm)
-
-// 	fullHash := sha256.New()
-// 	buffer := make([]byte, ChunkSize)
-// 	chunkIndex := 0
-// 	for {
-// 		bytesRead, readErr := file.Read(buffer)
-// 		if readErr != nil && readErr != io.EOF {
-// 			return nil, readErr
-// 		}
-// 		if bytesRead == 0 {
-// 			break
-// 		}
-// 		fullHash.Write(buffer[:bytesRead])
-// 		chunkData := buffer[:bytesRead]
-// 		checksum := computeDataChecksum(chunkData)
-// 		metadata.ChunkChecksums[chunkIndex] = checksum
-
-// 		// Write temporary chunk file.
-// 		chunkFileName := fmt.Sprintf("%s_chunk_%d.chunk", metadata.FileName, chunkIndex)
-// 		chunkFilePath := filepath.Join(outputDir, chunkFileName)
-// 		err = os.WriteFile(chunkFilePath, chunkData, 0644)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		chunkIndex++
-// 	}
-// 	metadata.Checksum = hex.EncodeToString(fullHash.Sum(nil))
-// 	return metadata, nil
-// }
-
 // generateTorrentFile writes the TorrentMetadata as a JSON file to outputDir and returns the file name.
 func generateTorrentFile(metadata *TorrentMetadata, outputDir string) (string, error) {
 	torrentFileName := fmt.Sprintf("%s.torrent", strings.TrimSuffix(metadata.FileName, filepath.Ext(metadata.FileName)))
@@ -338,18 +283,6 @@ func (s *CentralServer) SearchFile(ctx context.Context, req *pb.SearchRequest) (
 					CreatedAt:    metadata.CreatedAt,
 				})
 			}
-			// candidates := []string{metadata.FileName, metadata.ArtistName}
-			// matches := fuzzy.RankFindNormalized(query, candidates)
-			// sort.Sort(matches) // Most relevant first
-
-			// if len(matches) > 0 {
-			// 	results = append(results, &pb.SongInfo{
-			// 		FileName:      metadata.FileName,
-			// 		ArtistName:    metadata.ArtistName,
-			// 		PeerAddresses: metadata.Peers,
-			// 		CreatedAt:     metadata.CreatedAt,
-			// 	})
-			// }
 		}
 	}
 

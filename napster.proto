@@ -24,7 +24,8 @@ service CentralServer {
     // rpc GenerateTorrent(TorrentRequest) returns (TorrentResponse);
     rpc UploadFile(stream FileChunk) returns (UploadResponse);
     rpc GetTorrent(SearchRequest) returns (TorrentResponse);
-    rpc EnableSeeding(SeedingRequest) returns (GenResponse);    
+    rpc EnableSeeding(SeedingRequest) returns (GenResponse);
+    rpc RegisterContributor(ContributorRequest) returns (GenResponse);
     
     rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
     rpc HealthCheckServer(HealthCheckRequest) returns (HealthCheckResponse);
@@ -33,6 +34,11 @@ service CentralServer {
 service PeerService {
     rpc RequestChunk(ChunkRequest) returns (ChunkResponse);
     rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+    rpc DownloadThisFile(SearchRequest) returns (GenResponse);
+}
+
+message ContributorRequest {
+    string ContriAddr = 1;
 }
 
 message SeedingRequest {

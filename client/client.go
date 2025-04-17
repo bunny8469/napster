@@ -102,19 +102,19 @@ func (p *PeerServer) UploadFile(localFilePath string, peerAddress string, upload
 	}
 	
 	metadata, _ := tag.ReadFrom(file)
-	// if err != nil {
-	// 	return "", fmt.Errorf("failed to read metadata: %v", err)
-	// }
+	if err != nil {
+		metadata = nil
+	}
 
 	// Reset file pointer to the beginning
 	_, err = file.Seek(0, io.SeekStart)
 	if err != nil {
 		return "", fmt.Errorf("failed to reset file pointer: %v", err)
 	}
-
-	albumArtist := metadata.AlbumArtist()
-	if albumArtist == "" {
-		albumArtist = "Unknown Artist" 
+	
+	albumArtist := "Unknown Artist" 
+	if metadata != nil {
+		albumArtist = metadata.AlbumArtist()
 	}
 
 	// Start the client-streaming RPC

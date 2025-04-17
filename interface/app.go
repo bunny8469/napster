@@ -23,10 +23,11 @@ type App struct {
 	grpcClient	 	*client.PeerServer
 	peerAddress		string
 	httpPort		string
+	contributor		bool
 	ctx        		context.Context
 }
 
-func NewApp(address string, httpPort string) *App {
+func NewApp(address string, httpPort string, contributor bool) *App {
 	_, indexingClient := client.GetIndexingClient("localhost:50051")
 	
 	clt := &client.PeerServer{
@@ -51,6 +52,7 @@ func NewApp(address string, httpPort string) *App {
 		grpcClient: clt,
 		peerAddress: address,
 		httpPort: httpPort,
+		contributor: contributor,
 	}
 }
 

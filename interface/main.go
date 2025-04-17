@@ -26,6 +26,7 @@ var icon []byte
 func main() {
 
 	port := flag.String("port", "5003", "Port to run the peer server on")
+	contributor := flag.Bool("c", false, "Contributor Node")
 	flag.Parse()
 
 	download_dir := "./downloads_" + *port
@@ -45,13 +46,7 @@ func main() {
 	address := "localhost:" + *port
 
 	// Create an instance of the app structure
-	app := NewApp(address, httpPort)
-	
-	// Start gRPC server in a separate goroutine
-	// go func() {
-	// 	// Start the gRPC server
-	// 	server.StartGRPCServer() // or whatever your address is
-	// }()
+	app := NewApp(address, httpPort, *contributor)
 
 	// Create application with options
 	err := wails.Run(&options.App{
