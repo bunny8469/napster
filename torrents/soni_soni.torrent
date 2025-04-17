@@ -1,0 +1,26 @@
+{
+  "file_name": "soni_soni.mp3",
+  "file_size": 2883584,
+  "chunk_size": 262144,
+  "checksum": "8b76741523df7d7d182b91d34badaa7d9e8b3bd625c6d1f7e629553f9cc779ab",
+  "chunk_checksums": {
+    "0": "623a235357259ff7bff3f0b6dbd5153c69e95f2cb8276e5e7ae9274cba16345f",
+    "1": "752874e9818a64794dfa91961c478521d22fd5426e879686857bacf4bfc16b51",
+    "10": "85dbec703bbced85435b74ff2bd78d6d7bce8601fc27e5c78f1f3723ca5396e5",
+    "2": "d2b6decb680fbaf7d0109259fc296d26e7e95cc8707d554af1f003f1403e4268",
+    "3": "5b456f7d8ee2c0c89e9ecd824522621b9b6f6875e8c561a09b205417f65213ae",
+    "4": "9d5a2a4aa39b0b1495b37df889654c8ec4799fc0feb50bb2cf2b131b4a708e46",
+    "5": "c0d5714e9ea5e27e794ad042427d523b780ff467139c1acc90f45a2a2d9c32bc",
+    "6": "89fb030c2f389adfad27692a2aaa38ca7d27b716c1f780bb7d3d4dc519698d2b",
+    "7": "e4a0b0e4020b7ac5730e75ce09fefbce763b2e70a4cf21d47c4fa81749ae09ce",
+    "8": "db1c923ff072a203ca4a96e40ee2f92e4a2c2aa324f41c0e4d615ef70f3a25ab",
+    "9": "0b8403a39357756dc462777a2be6c79dfd6a9eef9e7fa1f27a7823da88abe114"
+  },
+  "peers": [
+    "localhost:5003"
+  ],
+  "artist_name": "Unknown Artist",
+  "created_at": "2025-04-18T03:12:12+05:30",
+  "duration": 11,
+  "status": ""
+}
