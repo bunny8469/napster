@@ -10,6 +10,10 @@ export function GetHttpPort() {
   return window['go']['main']['App']['GetHttpPort']();
 }
 
+export function GetLibraryTorrents() {
+  return window['go']['main']['App']['GetLibraryTorrents']();
+}
+
 export function GetMusicFilePath(arg1) {
   return window['go']['main']['App']['GetMusicFilePath'](arg1);
 }

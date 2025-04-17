@@ -92,6 +92,16 @@ func (a *App) GetTorrents() []client.TorrentInfo {
 	return torrents
 }
 
+func (a *App) GetLibraryTorrents() []client.TorrentInfo {
+	torrents, err := a.grpcClient.GetLibraryTorrents()
+	if err != nil {
+		log.Printf("Failed to get library torrents: %v", err)
+		return nil
+	}
+	return torrents
+}
+
+
 func (a *App) SearchSongs(query string) []*pb.SongInfo {
 	results, err := a.grpcClient.SearchFile(query)
 	if err != nil {

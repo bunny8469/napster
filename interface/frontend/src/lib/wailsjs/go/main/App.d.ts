@@ -7,6 +7,8 @@ export function DownloadFile(arg1:string):Promise<string>;
 
 export function GetHttpPort():Promise<string>;
 
+export function GetLibraryTorrents():Promise<Array<client.TorrentInfo>>;
+
 export function GetMusicFilePath(arg1:string):Promise<string>;
 
 export function GetPeerAddress():Promise<string>;
