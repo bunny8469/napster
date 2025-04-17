@@ -5,7 +5,11 @@ import {__} from '../models';
 
 export function DownloadFile(arg1:string):Promise<string>;
 
+export function GetContributorStatus():Promise<boolean>;
+
 export function GetHttpPort():Promise<string>;
+
+export function GetLibraryTorrents():Promise<Array<client.TorrentInfo>>;
 
 export function GetMusicFilePath(arg1:string):Promise<string>;
 

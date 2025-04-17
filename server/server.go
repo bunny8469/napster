@@ -22,6 +22,7 @@ import (
 	pb "napster"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var debug_mode = false;
@@ -36,7 +37,7 @@ type CentralServer struct {
 	peerStatus        	map[string]bool     // Peer health status
 	replicationFactor 	int                 // Number of replicas per file
 	ContributorHashring *consistent.Consistent
-	cNodes				[]string
+	cNodes				map[string]pb.PeerServiceClient
 }
 
 func NewCentralServer() *CentralServer {
@@ -45,52 +46,32 @@ func NewCentralServer() *CentralServer {
 		peerStatus:        make(map[string]bool),
 		replicationFactor: 3,
 		ContributorHashring: consistent.New(),
+		cNodes: make(map[string]pb.PeerServiceClient),
 	}
 }
 
 func (s *CentralServer) RegisterContributor(ctx context.Context, req *pb.ContributorRequest) (*pb.GenResponse, error) {
 
+	if _, exists := s.cNodes[req.ContriAddr]; exists {
+		return &pb.GenResponse{Status: 204}, nil
+	}
+
+	if (len(s.cNodes) > s.replicationFactor * 5) {
+		return &pb.GenResponse{Status: 400}, nil
+	}
+
+	conn, err := grpc.NewClient(req.ContriAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return &pb.GenResponse{}, err
+	}
+	
+	client := pb.NewPeerServiceClient(conn)
+	s.cNodes[req.ContriAddr] = client
 	s.ContributorHashring.Add(req.ContriAddr)
-	return &pb.GenResponse{}, nil
-}
 
-// --- RegisterPeer ---
-// For each file in req.FilePaths, the server renames the file by appending a random suffix,
-// computes its chunk metadata by virtually chunking the file in a temporary directory,
-// generates a torrent file (stored in ./torrents) with ArtistName and CreatedAt, and sends the new name.
-func (s *CentralServer) RegisterPeer(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.peerStatus[req.PeerAddress] = true
-
-	// If no file paths provided, just register the peer.
-	if len(req.FilePaths) == 0 {
-		log.Printf("Peer %s registered and available for chunk storage.", req.PeerAddress)
-		return &pb.RegisterResponse{
-			Success: true,
-			Message: "Peer registered successfully with the server",
-		}, nil
-	}
-
-	availablePeers := []string{}
-	for peer := range s.peerStatus {
-		if s.peerStatus[peer] {
-			availablePeers = append(availablePeers, peer)
-		}
-	}
-	if len(availablePeers) < 3 {
-		log.Printf("Not enough peers available. At least 3 required, found %d", len(availablePeers))
-		return &pb.RegisterResponse{
-			Success: false,
-			Message: "Not enough peers available to store the file",
-		}, nil
-	}
-
-	return &pb.RegisterResponse{
-		Success:     true,
-		Message:     "File registered with redundancy",
-	}, nil
+	log.Printf("Added Contributor %s", req.ContriAddr);
+	
+	return &pb.GenResponse{Status: 200}, nil
 }
 
 // --- UploadFile ---
@@ -118,7 +99,8 @@ func (s *CentralServer) UploadFile(stream pb.CentralServer_UploadFileServer) err
 			metadata.ChunkSize = ChunkSize
 			metadata.ArtistName = req.AlbumArtist
 			metadata.Peers = []string{req.PeerAddress}
-
+			metadata.Duration = int64(req.Duration)
+			
 			if req.FileName == "" || req.PeerAddress == "" {
 				return stream.SendAndClose(&pb.UploadResponse{
 					Status:         301,
@@ -147,7 +129,6 @@ func (s *CentralServer) UploadFile(stream pb.CentralServer_UploadFileServer) err
 	// Finalize overall checksum and update metadata.
 	metadata.Checksum = hex.EncodeToString(sha256Hasher.Sum(nil))
 	metadata.CreatedAt = time.Now().Format(time.RFC3339)
-	metadata.Duration = int64(len(metadata.ChunkChecksums)) // Using number of chunks.
 	metadata.FileSize = int64(chunkIndex * ChunkSize) // Assuming all chunks are full size.
 	
 	// metadata.Peers = --- During loadbalancing, this will be filled with the list of peers.
@@ -162,6 +143,18 @@ func (s *CentralServer) UploadFile(stream pb.CentralServer_UploadFileServer) err
 	}
 
 	s.fileMap[metadata.FileName] = torrentFileName
+
+	go func() {
+		for _ = range min(3, len(s.cNodes)) {
+			clientAddr, _ := s.ContributorHashring.Get(metadata.CreatedAt)
+			resp, err := s.cNodes[clientAddr].DownloadThisFile(context.Background(), &pb.SearchRequest{
+				Query: metadata.FileName,
+			})
+			if err != nil {
+				log.Printf("%s %v", resp, err)
+			}
+		}
+	}()
 
 	// Respond to the client with the torrent file info.
 	return stream.SendAndClose(&pb.UploadResponse{
@@ -329,7 +322,6 @@ func (s *CentralServer) GetTorrent(ctx context.Context, req *pb.SearchRequest) (
 		return &pb.TorrentResponse{ Status: 404 }, nil
 	}
 	
-	log.Println("hello wor2")
 	torrentPath = filepath.Join(TORRENTS_DIR, torrentPath)
 	log.Print(torrentPath)
 
@@ -338,8 +330,6 @@ func (s *CentralServer) GetTorrent(ctx context.Context, req *pb.SearchRequest) (
 		log.Printf("Error reading torrent file %s: %v", torrentPath, err)
 		return &pb.TorrentResponse{ Status: 500 }, nil
 	}
-
-	log.Println("hello wordl")
 
 	return &pb.TorrentResponse{
 		Status:   200,

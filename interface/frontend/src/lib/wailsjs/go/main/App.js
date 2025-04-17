@@ -6,8 +6,16 @@ export function DownloadFile(arg1) {
   return window['go']['main']['App']['DownloadFile'](arg1);
 }
 
+export function GetContributorStatus() {
+  return window['go']['main']['App']['GetContributorStatus']();
+}
+
 export function GetHttpPort() {
   return window['go']['main']['App']['GetHttpPort']();
+}
+
+export function GetLibraryTorrents() {
+  return window['go']['main']['App']['GetLibraryTorrents']();
 }
 
 export function GetMusicFilePath(arg1) {

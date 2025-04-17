@@ -16,7 +16,7 @@ import (
 	"sort"
 	"strings"
 	"time"
-
+	"github.com/tcolgate/mp3"
 	pb "napster"
 
 	"github.com/dhowden/tag"
@@ -43,11 +43,17 @@ type TorrentMetadata struct {
 	Status 		   string 		  `json:"status"`
 }
 
+type AppCallbacks interface {
+	DownloadFile(query string) string
+	UploadFile(filePath string, artist string) string
+}
+
 // PeerServer implements the PeerService for serving file requests and health checks.
 type PeerServer struct {
 	pb.UnimplementedPeerServiceServer
 	PeerAddress string
 	Client		pb.CentralServerClient
+	AppCallbacks AppCallbacks
 }
 
 // HealthCheck returns alive status.
@@ -92,6 +98,32 @@ func computeDataChecksum(data []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// Get duration (in seconds) of MP3 file
+func getMP3Duration(filePath string) (int, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+
+	d := mp3.NewDecoder(file)
+	var f mp3.Frame
+	skipped := 0
+	var duration time.Duration
+
+	for {
+		if err := d.Decode(&f, &skipped); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return 0, err
+		}
+		duration += f.Duration()
+	}
+
+	return int(duration.Seconds()), nil
+}
+
 // uploadFile streams the file to the central server chunk by chunk,
 // receives renamed file name from server, then saves chunks locally with the new name.
 func (p *PeerServer) UploadFile(localFilePath string, peerAddress string, uploadCallback func(metadata TorrentMetadata)) (string, error) {
@@ -116,6 +148,12 @@ func (p *PeerServer) UploadFile(localFilePath string, peerAddress string, upload
 	if metadata != nil {
 		albumArtist = metadata.AlbumArtist()
 	}
+	duration, err := getMP3Duration(localFilePath)
+	if err != nil {
+		log.Printf("Failed to calculate duration: %v", err)
+		duration = 0
+	}
+	fmt.Printf("Duration: %d\n", duration)
 
 	// Start the client-streaming RPC
 	stream, err := p.Client.UploadFile(context.Background())
@@ -148,6 +186,7 @@ func (p *PeerServer) UploadFile(localFilePath string, peerAddress string, upload
 		if chunkIndex == 0 {
 			req.PeerAddress = peerAddress
 			req.AlbumArtist = albumArtist
+			req.Duration = int32(duration)
 		}
 		if err := stream.Send(req); err != nil {
 			log.Printf("Error sending chunk: %v", err)
@@ -221,6 +260,14 @@ func (p *PeerServer) UploadFile(localFilePath string, peerAddress string, upload
 
 	fmt.Printf("Chunks stored locally as: %s_chunk_* in ./chunks/\n", originalBaseName)
 	return "", nil
+}
+
+func (p *PeerServer) DownloadThisFile(ctx context.Context, req *pb.SearchRequest) (*pb.GenResponse, error) {
+	if p.AppCallbacks != nil {
+		p.AppCallbacks.DownloadFile(req.Query)
+	}
+	
+	return &pb.GenResponse{Status: 200}, nil
 }
 
 // searchFileOnServer queries the central server for peers storing the given file.

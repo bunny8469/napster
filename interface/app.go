@@ -29,11 +29,27 @@ type App struct {
 
 func NewApp(address string, httpPort string, contributor bool) *App {
 	_, indexingClient := client.GetIndexingClient("localhost:50051")
+	if contributor {
+		log.Print("hello")
+		indexingClient.RegisterContributor(context.Background(), &pb.ContributorRequest{
+			ContriAddr: address,
+		})
+		log.Print("world")
+	}
 	
 	clt := &client.PeerServer{
 		Client: indexingClient,
 		PeerAddress: address,
 	}
+
+	app := &App{
+		grpcClient: clt,
+		peerAddress: address,
+		httpPort: httpPort,
+		contributor: contributor,
+	};
+
+	clt.AppCallbacks = app 
 
 	parts := strings.Split(address, ":")
 	port := parts[len(parts)-1] // "50051"
@@ -48,12 +64,7 @@ func NewApp(address string, httpPort string, contributor bool) *App {
 		}
 	}()
 
-	return &App{
-		grpcClient: clt,
-		peerAddress: address,
-		httpPort: httpPort,
-		contributor: contributor,
-	}
+	return app
 }
 
 // ============ Wails Lifecycle Hooks ============
@@ -85,6 +96,10 @@ func (a *App) GetPeerAddress() string {
 	return a.peerAddress;
 }
 
+func (a *App) GetContributorStatus() bool { 
+	return a.contributor;
+}
+
 func (a *App) GetTorrents() []client.TorrentInfo {
 	torrents, err := a.grpcClient.GetLocalTorrents()
 	if err != nil {
@@ -93,6 +108,16 @@ func (a *App) GetTorrents() []client.TorrentInfo {
 	}
 	return torrents
 }
+
+func (a *App) GetLibraryTorrents() []client.TorrentInfo {
+	torrents, err := a.grpcClient.GetLibraryTorrents()
+	if err != nil {
+		log.Printf("Failed to get library torrents: %v", err)
+		return nil
+	}
+	return torrents
+}
+
 
 func (a *App) SearchSongs(query string) []*pb.SongInfo {
 	results, err := a.grpcClient.SearchFile(query)
@@ -122,6 +147,12 @@ func (a *App) DownloadFile(query string) string {
 		runtime.EventsEmit(a.ctx, "download-queue", metadata)
 	})
 	return result
+}
+
+func (a *App) StopSeeding(query string) {
+	a.grpcClient.Client.StopSeeding(context.Background(), &pb.SeedingRequest{
+		FileName: query, ClientAddr: a.peerAddress,
+	})
 }
 
 func (a *App) SelectFileAndUpload() (string, error) {

@@ -124,9 +124,9 @@
                 <DropdownMenuItem class="focus:bg-[#333] focus:text-[#4a86e8]" on:click={() => handleTorrentOptions("info", torrent)}>
                     Details
                 </DropdownMenuItem>
-                <DropdownMenuItem class="focus:bg-[#333] focus:text-[#4a86e8] text-red-400" on:click={() => handleTorrentOptions("delete", torrent)}>
+                <!-- <DropdownMenuItem class="focus:bg-[#333] focus:text-[#4a86e8] text-red-400" on:click={() => handleTorrentOptions("delete", torrent)}>
                     Delete
-                </DropdownMenuItem>
+                </DropdownMenuItem> -->
                 </DropdownMenuContent>
             </DropdownMenu>
             </TableCell>

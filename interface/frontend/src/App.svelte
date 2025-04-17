@@ -10,6 +10,7 @@
     SelectFileAndUpload,
     GetTorrents,
     GetHttpPort,
+    GetLibraryTorrents,
   } from "$lib/wailsjs/go/main/App";
   import { onMount } from "svelte";
 
@@ -28,16 +29,34 @@
   let searchResults = [];
 
   let torrents = [];
-
-  onMount(async () => {
-    window.addEventListener("keydown", handleKeydown);
-
-    try {
-      torrents = await GetTorrents();
-      console.log("Torrents:", torrents);
-    } catch (err) {
-      alert("Failed to load torrents: " + (err.message || err));
+  let libtorrents = [];
+  onMount(() => {
+    async function loadInitialData() {
+      try {
+        torrents = await GetTorrents();
+        console.log("Torrents:", torrents);
+        libtorrents = await GetLibraryTorrents();
+        console.log("Library Torrents:", libtorrents);
+      } catch (err) {
+        alert("Failed to load torrents: " + (err.message || err));
+      }
     }
+
+    loadInitialData();
+
+    const intervalId = setInterval(async () => {
+      try {
+        const updatedLibtorrents = await GetLibraryTorrents();
+        libtorrents = updatedLibtorrents;
+        console.log("Updated Library Torrents:", updatedLibtorrents);
+      } catch (err) {
+        console.error("Error updating library torrents: ", err);
+      }
+    }, 3000); // 3 seconds
+
+    return () => {
+      clearInterval(intervalId); // clean up on component destroy
+    };
   });
 
   function handleKeydown(e) {
@@ -46,7 +65,6 @@
       togglePlayPause();
     }
   }
-
 
   async function handleSearch() {
     try {
@@ -66,23 +84,24 @@
 
   let audioSrc = "";
   let httpPort;
-    
+
   onMount(async () => {
     try {
-      httpPort = await GetHttpPort()
+      httpPort = await GetHttpPort();
       console.log("Audio source:", httpPort); // Log the audio source to verify
     } catch (err) {
       alert("Failed to get audio source: " + (err.message || err));
     }
   });
-  
+
   async function playMusic(songName) {
     const audioPlayer = document.getElementById("audioPlayer");
 
     if (!audioPlayer) return;
 
     // Always update the source first
-    const newSrc = `http://localhost${httpPort}/audio/` + encodeURIComponent(songName);
+    const newSrc =
+      `http://localhost${httpPort}/audio/` + encodeURIComponent(songName);
 
     // If the current src is different, load the new source
     if (audioPlayer.src !== newSrc) {
@@ -91,7 +110,9 @@
 
       // Wait for audio to be ready before playing
       audioPlayer.oncanplay = () => {
-        audioPlayer.play().catch((err) => console.error("Playback failed:", err));
+        audioPlayer
+          .play()
+          .catch((err) => console.error("Playback failed:", err));
         audioPlayer.oncanplay = null; // Remove the handler after it's used
       };
     } else {
@@ -104,8 +125,7 @@
     if (!currentSong.isPlaying) {
       playMusic(currentSong.name); // Play the music if it's not playing
       console.log("Playing audio");
-    } 
-    else {
+    } else {
       const audioPlayer = document.getElementById("audioPlayer");
       if (audioPlayer) {
         audioPlayer.pause(); // Pause if it's playing
@@ -115,91 +135,64 @@
     currentSong.isPlaying = !currentSong.isPlaying;
   }
 
-
-  // function handleTorrentOptions(option, torrent) {
-  //   // Implementation for handling torrent options
-  //   alert(`Action '${option}' on torrent: ${torrent.name}`);
-  // }
-  // function handleTorrentOptions(option, torrent) {
-  //   if (option === "play") {
-  //     currentSong = {
-  //       name: torrent.file_name,
-  //       artist: torrent.artist_name,
-  //       genres: ["Unknown"], // or get from metadata if available
-  //       currentTime: "0:00",
-  //       duration: torrent.duration, // Placeholder or extract from metadata
-  //       isPlaying: true,
-  //       progress: 0,
-  //       size: torrent.file_size,
-  //     };
-  //     return;
-  //   }
-  //   if (option === "info") {
-  //     // Implementation for displaying torrent info
-  //     alert(`Torrent info for ${torrent.name}`);
-  //     return;
-  //   }
-  //   alert(`Action '${option}' on torrent: ${torrent.name}`);
-  // }
   function handleTorrentOptions(option, torrent) {
-  if (option === "play") {
-    currentSong = {
-      name: torrent.Metadata.file_name,
-      artist: torrent.Metadata.artist_name,
-      genres: ["Unknown"], // or get from metadata if available
-      currentTime: "0:00", // Placeholder or extract from metadata
-      duration: formatDuration(torrent.Metadata.Duration),
-      isPlaying: true,
-      progress: 0,
-      size: formatFileSize(torrent.Metadata.file_size),
-    };
-    togglePlayPause()
-    return;
-  }
-  if (option === "info") {
-    // Display torrent info in a more user-friendly way
-    const createdDate = new Date(torrent.Metadata.CreatedAt).toLocaleString();
-    const infoMessage = `
+    if (option === "play") {
+      currentSong = {
+        name: torrent.Metadata.file_name,
+        artist: torrent.Metadata.artist_name,
+        genres: ["Unknown"], // or get from metadata if available
+        currentTime: "0:00", // Placeholder or extract from metadata
+        duration: formatDuration(torrent.Metadata.duration),
+        isPlaying: true,
+        progress: 0,
+        size: formatFileSize(torrent.Metadata.file_size),
+      };
+      togglePlayPause();
+      return;
+    }
+    if (option === "info") {
+      // Display torrent info in a more user-friendly way
+      const createdDate = new Date(torrent.Metadata.CreatedAt).toLocaleString();
+      const infoMessage = `
       Song Information:
       
       Title: ${torrent.Metadata.file_name}
       Artist: ${torrent.Metadata.artist_name}
       File Size: ${formatFileSize(torrent.Metadata.file_size)}
-      Duration: ${formatDuration(torrent.Metadata.Duration)}
+      Duration: ${formatDuration(torrent.Metadata.duration)}
       Created: ${createdDate}
       Available Peers: ${torrent.Metadata.peers ? torrent.Metadata.peers.length : 0}
     `;
-    alert(infoMessage);
-    return;
+      alert(infoMessage);
+      return;
+    }
+    alert(`Action '${option}' on torrent: ${torrent.Metadata.file_name}`);
   }
-  alert(`Action '${option}' on torrent: ${torrent.Metadata.file_name}`);
-}
 
-// Helper function to format file size from bytes to human-readable format
-function formatFileSize(bytes) {
-  if (!bytes) return "Unknown";
-  
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let size = parseInt(bytes);
-  let unitIndex = 0;
-  
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
+  // Helper function to format file size from bytes to human-readable format
+  function formatFileSize(bytes) {
+    if (!bytes) return "Unknown";
+
+    const units = ["B", "KB", "MB", "GB"];
+    let size = parseInt(bytes);
+    let unitIndex = 0;
+
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+
+    return `${size.toFixed(2)} ${units[unitIndex]}`;
   }
-  
-  return `${size.toFixed(2)} ${units[unitIndex]}`;
-}
 
-// Helper function to format duration from seconds to mm:ss format
-function formatDuration(seconds) {
-  if (!seconds) return "0:00";
-  
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
+  // Helper function to format duration from seconds to mm:ss format
+  function formatDuration(seconds) {
+    if (!seconds) return "0:00";
 
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  }
 
   function openSettings() {
     // Implementation for opening settings
@@ -218,7 +211,7 @@ function formatDuration(seconds) {
     // Calculate time based on percentage
     let totalSeconds = parseDuration(currentSong.duration);
     let currentSeconds = Math.floor(
-      totalSeconds * (currentSong.progress / 100),
+      totalSeconds * (currentSong.progress / 100)
     );
     currentSong.currentTime = formatTime(currentSeconds);
   }
@@ -246,14 +239,14 @@ function formatDuration(seconds) {
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
     <div class="md:col-span-2 flex flex-col gap-4">
       <!-- <Search {searchQuery} {searchResults} {handleSearch} {downloadSong} /> -->
-      <Search bind:searchQuery {searchResults} {handleSearch} /> 
+      <Search bind:searchQuery {searchResults} {handleSearch} />
       <Downloads bind:torrents {handleTorrentOptions} />
     </div>
 
     <div class="flex flex-col gap-4 sticky top-4 h-[calc(100vh-2rem)]">
       <audio id="audioPlayer" src={audioSrc} controls hidden></audio>
       <Player {currentSong} {togglePlayPause} {handleSliderChange} />
-      <Library {torrents} {handleTorrentOptions} />
+      <Library {libtorrents}/>
     </div>
   </div>
 </main>

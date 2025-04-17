@@ -19,6 +19,7 @@ import (
 )
 
 var DOWNLOAD_PATH = "./downloads"			// Folder for .crdownload, downloaded music files
+const LIBRARY_DIR = "../torrents"	// Folder for storing torrent files
 var TORRENTS_DIR = "./downloads/torrents"	// Folder for storing torrent files
 var CACHE_DIR = "./downloads/cache"		// cache for downloads, to make it resumable
 var MAX_THREADS = 4							// Max. threads for multi-source downloading
@@ -218,12 +219,12 @@ func StartDownload(metadata TorrentMetadata, indexingClient pb.CentralServerClie
 		Filename: metadata.FileName,
 		Status: "Downloading",
 	})
-	time.Sleep(5 * time.Second)
-
 	torrentStatus.RLock()
 	changeTorrentStatus(getFileName(metadata.FileName), "Downloading")
 	torrentStatus.RUnlock()
-	
+
+	time.Sleep(5 * time.Second)
+
 	ImportExistingChunks(metadata, chunkCoordinator)
 
 	// Launch worker goroutines
@@ -272,7 +273,7 @@ func StartDownload(metadata TorrentMetadata, indexingClient pb.CentralServerClie
 	changeTorrentStatus(getFileName(metadata.FileName), "Downloaded")
 	torrentStatus.RUnlock()
 	
-	_, err := indexingClient.EnableSeeding(context.Background(), &pb.SeedingRequest{FileName: metadata.FileName, ClientAddr: peerAddress})
+	_, err := indexingClient.EnableSeeding(context.Background(), &pb.SeedingRequest{FileName: metadata.FileName, ClientAddr: peerAddr})
 	if err != nil {
 		log.Printf("Seeding Failed: %v", err)
 		return
@@ -533,3 +534,52 @@ func (c *PeerServer) GetLocalTorrents() ([]TorrentInfo, error) {
 	return torrents, nil
 }
 
+
+func (c *PeerServer) GetLibraryTorrents() ([]TorrentInfo, error) {
+	files, err := os.ReadDir(LIBRARY_DIR)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Println(LIBRARY_DIR)
+
+	var torrents []TorrentInfo
+	for _, file := range files {
+		if filepath.Ext(file.Name()) == ".torrent" {
+			data, err := os.ReadFile(filepath.Join(LIBRARY_DIR, file.Name()))
+			if err != nil {
+				continue
+			}
+			var meta TorrentMetadata;
+			if err := json.Unmarshal(data, &meta); err != nil {
+				continue
+			}
+			
+			// verified, _ := verifyFileChecksum(filepath.Join(DOWNLOAD_PATH, meta.FileName), meta.Checksum)
+			
+			torrent := TorrentMetadata{
+				FileName:     meta.FileName,
+				ArtistName:   meta.ArtistName,
+				Peers:    meta.Peers,
+				// Progress: 100,               // Default for now
+				// Status:   "Complete",        // Future: check actual progress
+				FileSize:    meta.FileSize,
+				CreatedAt:  meta.CreatedAt, // Current timestamp
+				Duration:   meta.Duration,               // Default for now
+			}
+
+			var torrent_info TorrentInfo;
+			torrent_info.Metadata = torrent
+
+			// if verified {
+			// 	torrent_info.Progress = 100
+			// 	torrent_info.Status = "Downloaded"
+			// } else {
+			// 	// GetStatus()
+			// }
+			fmt.Printf("Appending: %+v\n", torrent_info)
+			torrents = append(torrents, torrent_info)
+		}
+	}
+	return torrents, nil
+}

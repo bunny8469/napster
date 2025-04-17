@@ -9,6 +9,7 @@ message FileChunk {
   string PeerAddress = 2;
   string albumArtist = 3;
   bytes chunk_data = 4;
+  int32 duration = 5;
 }
 
 // Response after a file is completely streamed.
@@ -25,10 +26,12 @@ service CentralServer {
     rpc UploadFile(stream FileChunk) returns (UploadResponse);
     rpc GetTorrent(SearchRequest) returns (TorrentResponse);
     rpc EnableSeeding(SeedingRequest) returns (GenResponse);
-    rpc RegisterContributor(ContributorRequest) returns (GenResponse);
+    rpc StopSeeding(SeedingRequest) returns (GenResponse);
     
     rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
     rpc HealthCheckServer(HealthCheckRequest) returns (HealthCheckResponse);
+
+    rpc RegisterContributor(ContributorRequest) returns (GenResponse);
 }
 
 service PeerService {
@@ -46,7 +49,9 @@ message SeedingRequest {
     string ClientAddr = 2;
 }
 
-message GenResponse {}
+message GenResponse {
+    int32 Status = 1;
+}
 
 message ChunkRequest {
     string ChunkName = 1;
