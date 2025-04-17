@@ -94,6 +94,27 @@
     }
   });
 
+  onMount(() => {
+    const audioPlayer = document.getElementById("audioPlayer");
+
+    if (audioPlayer) {
+      // Sync progress bar and current time
+      audioPlayer.addEventListener("timeupdate", () => {
+        const current = audioPlayer.currentTime;
+        const duration = audioPlayer.duration || 1;
+        currentSong.currentTime = formatTime(current);
+        currentSong.progress = (current / duration) * 100;
+      });
+
+      // When audio ends, reset state
+      audioPlayer.addEventListener("ended", () => {
+        currentSong.isPlaying = false;
+        currentSong.progress = 0;
+        currentSong.currentTime = "0:00";
+      });
+    }
+  });
+
   async function playMusic(songName) {
     const audioPlayer = document.getElementById("audioPlayer");
 
@@ -230,17 +251,16 @@
   }
 
   function handleSliderChange(e) {
-    // Update song progress based on slider value
-    currentSong.progress = e.target.value;
+    const audioPlayer = document.getElementById("audioPlayer");
+    const newProgress = e.target.value;
 
-    // Calculate time based on percentage
-    let totalSeconds = parseDuration(currentSong.duration);
-    let currentSeconds = Math.floor(
-      totalSeconds * (currentSong.progress / 100)
-    );
-    currentSong.currentTime = formatTime(currentSeconds);
+    if (audioPlayer && audioPlayer.duration) {
+      const newTime = (newProgress / 100) * audioPlayer.duration;
+      audioPlayer.currentTime = newTime;
+      currentSong.progress = newProgress;
+      currentSong.currentTime = formatTime(newTime);
+    }
   }
-
   // Helper function to parse duration string like "3:45" to seconds
   function parseDuration(duration) {
     const parts = duration.split(":");
@@ -248,10 +268,11 @@
   }
 
   // Helper function to format seconds to "m:ss" format
-  function formatTime(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  function formatTime(timeInSeconds) {
+    const totalSeconds = Math.floor(timeInSeconds); // removes milliseconds
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+    return `${minutes}:${seconds}`;
   }
 
   import "./index.css";
@@ -271,7 +292,7 @@
     <div class="flex flex-col gap-4 sticky top-4 h-[calc(100vh-2rem)]">
       <audio id="audioPlayer" src={audioSrc} controls hidden></audio>
       <Player {currentSong} {togglePlayPause} {handleSliderChange} />
-      <Library {libtorrents}/>
+      <Library {libtorrents} />
     </div>
   </div>
 </main>
