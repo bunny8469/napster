@@ -5,6 +5,7 @@
     export let currentSong;
     export let togglePlayPause;
     export let handleSliderChange;
+
   </script>
 
 <div class="bg-[#121212] border border-[#2a2a2a] rounded-lg p-4 md:p-6 h-min">
@@ -89,7 +90,7 @@
       </div>
       <div class="flex justify-between text-xs mt-2 text-[#b3b3b3]">
         <span>{currentSong.currentTime}</span>
-        <span>{currentSong.duration}</span>
+        <span>{(currentSong.duration)}</span>
       </div>
     </div>
   </div>

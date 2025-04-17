@@ -17,8 +17,8 @@
             <div class="bg-gradient-to-br from-[#2c5aa0] to-[#4a86e8] bg-clip-text text-transparent text-lg">♪</div>
           </div>
           <div class="flex-1">
-            <p class="font-medium text-white">{torrent.name}</p>
-            <p class="text-xs text-[#909090]">{torrent.artist}</p>
+            <p class="font-medium text-white">{torrent.file_name}</p>
+            <p class="text-xs text-[#909090]">{torrent.artist_name}</p>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger>

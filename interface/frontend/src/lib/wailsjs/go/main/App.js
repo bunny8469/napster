@@ -6,10 +6,30 @@ export function DownloadFile(arg1) {
   return window['go']['main']['App']['DownloadFile'](arg1);
 }
 
-export function GetPeers() {
-  return window['go']['main']['App']['GetPeers']();
+export function GetHttpPort() {
+  return window['go']['main']['App']['GetHttpPort']();
 }
 
-export function Greet(arg1) {
-  return window['go']['main']['App']['Greet'](arg1);
+export function GetMusicFilePath(arg1) {
+  return window['go']['main']['App']['GetMusicFilePath'](arg1);
+}
+
+export function GetPeerAddress() {
+  return window['go']['main']['App']['GetPeerAddress']();
+}
+
+export function GetTorrents() {
+  return window['go']['main']['App']['GetTorrents']();
+}
+
+export function SearchSongs(arg1) {
+  return window['go']['main']['App']['SearchSongs'](arg1);
+}
+
+export function SelectFileAndUpload() {
+  return window['go']['main']['App']['SelectFileAndUpload']();
+}
+
+export function UploadFile(arg1, arg2) {
+  return window['go']['main']['App']['UploadFile'](arg1, arg2);
 }

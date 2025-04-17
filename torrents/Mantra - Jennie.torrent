@@ -1,0 +1,24 @@
+{
+  "file_name": "Mantra - Jennie.mp3",
+  "file_size": 2359296,
+  "chunk_size": 262144,
+  "checksum": "f78332128320ec925b8c8b777edb35d5fa5b73048a8bfad2609b55a5b7a48e66",
+  "chunk_checksums": {
+    "0": "e4c921ef6c4674a66cd032e2bcc154e215bbb91f2d38f7f8133de8cd42e250b8",
+    "1": "e23148d9b6cbb02c17616f29087e6637b9e9b46432ba99e5233ad82b06f7b92b",
+    "2": "07841240fc6cd72155a3e8d23f21ec375ec52bf19dc1962fdd79d3175a8eeef2",
+    "3": "b829a0e44587f051f54749d6281be3302263e8ef90ab4daa8371ec60c732bb70",
+    "4": "838cc45065686560ceb0d1ca5ef82338a5b627220c3c34db01265735fa232bc1",
+    "5": "294cb103558aeda886772f3d7d64fa0c67c10812957d560685784f6c25f53982",
+    "6": "c53f713d815dc774404cb69c0dba809e4fe803511477b11d96a6cab699831380",
+    "7": "4923d6e67595cd04004d9a90f9f59016cd014c63090eb942360960851c4cc69d",
+    "8": "53416ef99f3c4e1080fa3f49e568daa55d32c95ed19ac318cabe7877467b9074"
+  },
+  "peers": [
+    "localhost:5003"
+  ],
+  "artist_name": "Jennie",
+  "created_at": "2025-04-18T02:36:10+05:30",
+  "duration": 9,
+  "status": ""
+}

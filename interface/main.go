@@ -2,8 +2,13 @@ package main
 
 import (
 	"embed"
+	"flag"
+	"fmt"
 	"log"
+	"net/http"
+	"os"
 
+	// server "napster/server"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/logger"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -19,8 +24,34 @@ var assets embed.FS
 var icon []byte
 
 func main() {
+
+	port := flag.String("port", "5003", "Port to run the peer server on")
+	flag.Parse()
+
+	download_dir := "./downloads_" + *port
+	http.Handle("/audio/", http.StripPrefix("/audio/", http.FileServer(http.Dir(download_dir))))
+
+	httpPort := ":" + *port + "0"
+	fmt.Printf("Server started at http://localhost%s\n", httpPort)
+
+	go func() {
+		err := http.ListenAndServe(httpPort, nil)
+		if err != nil {
+			fmt.Println("Error starting server:", err)
+			os.Exit(1)
+		}
+	}()
+
+	address := "localhost:" + *port
+
 	// Create an instance of the app structure
-	app := NewApp()
+	app := NewApp(address, httpPort)
+	
+	// Start gRPC server in a separate goroutine
+	// go func() {
+	// 	// Start the gRPC server
+	// 	server.StartGRPCServer() // or whatever your address is
+	// }()
 
 	// Create application with options
 	err := wails.Run(&options.App{

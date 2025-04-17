@@ -6,29 +6,49 @@ option go_package = "./";
 // Request message for sending a file chunk.
 message FileChunk {
   string file_name = 1;
-  bytes chunk_data = 2;
-  // Optionally add an int32 sequence_number = 3;
+  string PeerAddress = 2;
+  string albumArtist = 3;
+  bytes chunk_data = 4;
 }
 
 // Response after a file is completely streamed.
 message UploadResponse {
-  bool success = 1;
+  int32 Status = 1;
   string torrent_file_name = 2;
   string message = 3;
   string renamed_file_name = 4;
 }
 service CentralServer {
-    rpc RegisterPeer(RegisterRequest) returns (RegisterResponse);
+    // rpc RegisterPeer(RegisterRequest) returns (RegisterResponse);
     rpc SearchFile(SearchRequest) returns (SearchResponse);
+    // rpc GenerateTorrent(TorrentRequest) returns (TorrentResponse);
+    rpc UploadFile(stream FileChunk) returns (UploadResponse);
+    rpc GetTorrent(SearchRequest) returns (TorrentResponse);
+    rpc EnableSeeding(SeedingRequest) returns (GenResponse);    
+    
     rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
     rpc HealthCheckServer(HealthCheckRequest) returns (HealthCheckResponse);
-    rpc GenerateTorrent(TorrentRequest) returns (TorrentResponse);
-    rpc UploadFile(stream FileChunk) returns (UploadResponse);
 }
 
 service PeerService {
-    rpc RequestFile(FileRequest) returns (FileResponse);
+    rpc RequestChunk(ChunkRequest) returns (ChunkResponse);
     rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message SeedingRequest {
+    string FileName = 1;
+    string ClientAddr = 2;
+}
+
+message GenResponse {}
+
+message ChunkRequest {
+    string ChunkName = 1;
+}
+
+message ChunkResponse {
+    int32 status = 1;
+    bytes ChunkData = 2;
 }
 
 message RegisterRequest {
@@ -54,6 +74,7 @@ message SongInfo {
   string artist_name = 2;
   repeated string peer_addresses = 3;
   string created_at = 4;
+  string duration = 5;
 }
 
 message SearchResponse {
@@ -65,34 +86,24 @@ message HealthCheckResponse {
     bool alive = 1;
 }
 
-message FileRequest {
-    string file_name = 1;
-    string peer_address = 2;
-}
-
-message FileResponse {
-    bytes file_data = 1;
-}
-
 message TorrentRequest {
     string file_path = 1;
 }
 
 message TorrentResponse {
-    bool success = 1;
-    string torrent_file_name = 2;
-    string message = 3;
-    TorrentMetadata metadata = 4;
+    int32 Status = 1;
+    string Filename = 2;
+    bytes Content = 3;
 }
 
-message TorrentMetadata {
-    string file_name = 1;
-    int64 file_size = 2;
-    int32 chunk_size = 3;
-    string checksum = 4;
-    map<int32, string> chunk_checksums = 5;
-    repeated string peers = 6;
-    string artist_name = 7;
-    string created_at = 8;
-    int64 duration = 9;
-}
+// message TorrentMetadata {
+//     string file_name = 1;
+//     int64 file_size = 2;
+//     int32 chunk_size = 3;
+//     string checksum = 4;
+//     map<int32, string> chunk_checksums = 5;
+//     repeated string peers = 6;
+//     string artist_name = 7;
+//     string created_at = 8;
+//     int64 duration = 9;
+// }

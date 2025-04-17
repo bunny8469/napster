@@ -2,11 +2,11 @@
     import { Button } from "$lib/components/ui/button";
     import { Input } from "$lib/components/ui/input";
     import { Download } from "lucide-svelte";
+    import { DownloadFile } from "$lib/wailsjs/go/main/App";
     
     export let searchQuery;
     export let searchResults;
     export let handleSearch;
-    export let downloadSong;
   </script>
 
 <div class="bg-[#121212] border border-[#2a2a2a] rounded-md p-4 h-min">
@@ -15,6 +15,9 @@
         placeholder="Search for songs, artists..." 
         class="bg-[#1a1a1a] border-[#333] text-[#e0e0e0] focus:border-[#4a86e8] focus-visible:ring-0 focus-visible:ring-offset-0" 
         bind:value={searchQuery}
+        on:keydown={(e) => {
+            if (e.key === "Enter") handleSearch();
+        }}        
     />
     <Button class="bg-[#4a86e8] hover:bg-[#6a9ae8] text-white" on:click={handleSearch}>Search</Button>
     </div>
@@ -40,7 +43,7 @@
                 <p class="text-xs text-[#909090]">{song.size}</p>
                 </div>
             </div>
-            <Button variant="ghost" size="icon" class="text-[#909090] hover:text-[#4a86e8] hover:bg-[#1a1a1a]" on:click={() => downloadSong(song)}>
+            <Button variant="ghost" size="icon" class="text-[#909090] hover:text-[#4a86e8] hover:bg-[#1a1a1a]" on:click={() => DownloadFile(song.name)}>
                 <Download class="h-4 w-4" />
             </Button>
             </div>

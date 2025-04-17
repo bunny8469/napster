@@ -1,209 +1,257 @@
 <script>
   import "./app.css";
-  import Header from '$lib/components/ui/Header.svelte';
-  import Search from '$lib/components/music/Search.svelte';
-  import Downloads from '$lib/components/music/Downloads.svelte';
-  import Player from '$lib/components/music/Player.svelte';
-  import Library from '$lib/components/music/Library.svelte';
-    
+  import Header from "$lib/components/ui/Header.svelte";
+  import Search from "$lib/components/music/Search.svelte";
+  import Downloads from "$lib/components/music/Downloads.svelte";
+  import Player from "$lib/components/music/Player.svelte";
+  import Library from "$lib/components/music/Library.svelte";
+  import {
+    SearchSongs,
+    SelectFileAndUpload,
+    GetTorrents,
+    GetHttpPort,
+  } from "$lib/wailsjs/go/main/App";
+  import { onMount } from "svelte";
+
   let searchQuery = "";
   let currentSong = {
-    name: "Song Name",
-    artist: "Artist Name",
+    name: "Napster",
+    artist: "Jahnavi, Kriti, Praneeth",
     genres: ["Genre #1", "Genre #1"],
-    currentTime: "1:17",
-    duration: "3:45",
+    currentTime: "0:00",
+    duration: "4:30",
     isPlaying: false,
-    progress: 30 // Progress as percentage
+    progress: 30, // Progress as percentage
+    size: "100 MB",
   };
-  
-  let searchResults = [
-    { id: 1, name: "Feel Good Inc", artist: "Gorillaz", size: "4.5 MB", hasVideo: true },
-    { id: 2, name: "Hotel California", artist: "Eagles", size: "6.2 MB", hasVideo: false },
-    { id: 3, name: "Sweet Child O' Mine", artist: "Guns N' Roses", size: "5.8 MB", hasVideo: true },
-    { id: 4, name: "Billie Jean", artist: "Michael Jackson", size: "4.2 MB", hasVideo: true },
-    { id: 5, name: "Smells Like Teen Spirit", artist: "Nirvana", size: "5.1 MB", hasVideo: true },
-    { id: 6, name: "Imagine", artist: "John Lennon", size: "3.8 MB", hasVideo: false },
-  ];
-  
-  let torrents = [
-    { 
-      id: 1, 
-      name: "Harleys In Hawaii", 
-      artist: "Katy Perry", 
-      hasVideo: true,
-      peers: 35, 
-      progress: 100, 
-      status: "Complete", 
-      size: "8.2 MB", 
-      speed: "0 KB/s" 
-    },
-    { 
-      id: 2, 
-      name: "Blood (From \"Marco\")", 
-      artist: "Ravi Basrur, Dabzee, Rohith Sj", 
-      hasVideo: true,
-      peers: 42, 
-      progress: 78, 
-      status: "Downloading", 
-      size: "12.4 MB", 
-      speed: "1.2 MB/s" 
-    },
-    { 
-      id: 3, 
-      name: "Poker Face", 
-      artist: "Lady Gaga", 
-      hasVideo: false,
-      peers: 89, 
-      progress: 64, 
-      status: "Downloading", 
-      size: "5.7 MB", 
-      speed: "856 KB/s" 
-    },
-    { 
-      id: 4, 
-      name: "Tony's Mayhem", 
-      artist: "Ravi Basrur", 
-      hasVideo: false,
-      peers: 12, 
-      progress: 45, 
-      status: "Downloading", 
-      size: "6.8 MB", 
-      speed: "320 KB/s" 
-    },
-    { 
-      id: 5, 
-      name: "Firework", 
-      artist: "Katy Perry", 
-      hasVideo: false,
-      peers: 67, 
-      progress: 100, 
-      status: "Complete", 
-      size: "7.1 MB", 
-      speed: "0 KB/s" 
-    },
-    { 
-      id: 6, 
-      name: "No Time for Caution", 
-      artist: "Hans Zimmer", 
-      hasVideo: false,
-      peers: 28, 
-      progress: 100, 
-      status: "Complete", 
-      size: "14.2 MB", 
-      speed: "0 KB/s" 
-    },
-    { 
-      id: 7, 
-      name: "Lokiverse - Background Score", 
-      artist: "Anirudh Ravichander", 
-      hasVideo: false,
-      peers: 51, 
-      progress: 32, 
-      status: "Downloading", 
-      size: "24.6 MB", 
-      speed: "1.8 MB/s" 
-    },
-    { 
-      id: 8, 
-      name: "Thunder", 
-      artist: "Imagine Dragons", 
-      hasVideo: true,
-      peers: 74, 
-      progress: 59, 
-      status: "Downloading", 
-      size: "9.3 MB", 
-      speed: "750 KB/s" 
-    },
-    { 
-      id: 9, 
-      name: "Bohemian Rhapsody", 
-      artist: "Queen", 
-      hasVideo: true,
-      peers: 112, 
-      progress: 100, 
-      status: "Complete", 
-      size: "16.7 MB", 
-      speed: "0 KB/s" 
-    },
-    { 
-      id: 10, 
-      name: "Shape of You", 
-      artist: "Ed Sheeran", 
-      hasVideo: false,
-      peers: 87, 
-      progress: 100, 
-      status: "Complete", 
-      size: "7.8 MB", 
-      speed: "0 KB/s" 
+
+  let searchResults = [];
+
+  let torrents = [];
+
+  onMount(async () => {
+    window.addEventListener("keydown", handleKeydown);
+
+    try {
+      torrents = await GetTorrents();
+      console.log("Torrents:", torrents);
+    } catch (err) {
+      alert("Failed to load torrents: " + (err.message || err));
     }
-  ];
-  
-  function handleSearch() {
-    // Implementation for search functionality
-    alert("Searching for: " + searchQuery);
+  });
+
+  function handleKeydown(e) {
+    if (e.code === "Space" && e.target === document.body) {
+      e.preventDefault(); // prevent page scroll
+      togglePlayPause();
+    }
   }
+
+
+  async function handleSearch() {
+    try {
+      const results = await SearchSongs(searchQuery);
+      // Map Go response to frontend format
+      searchResults = results.map((song, idx) => ({
+        id: idx + 1,
+        name: song.file_name,
+        artist: song.artist_name,
+        size: "unkown", // Placeholder
+        hasVideo: false, // Placeholder or infer from fileName?
+      }));
+    } catch (err) {
+      alert("Search failed: " + (err.message || err));
+    }
+  }
+
+  let audioSrc = "";
+  let httpPort;
+    
+  onMount(async () => {
+    try {
+      httpPort = await GetHttpPort()
+      console.log("Audio source:", httpPort); // Log the audio source to verify
+    } catch (err) {
+      alert("Failed to get audio source: " + (err.message || err));
+    }
+  });
   
+  async function playMusic(songName) {
+    const audioPlayer = document.getElementById("audioPlayer");
+
+    if (!audioPlayer) return;
+
+    // Always update the source first
+    const newSrc = `http://localhost${httpPort}/audio/` + encodeURIComponent(songName);
+
+    // If the current src is different, load the new source
+    if (audioPlayer.src !== newSrc) {
+      audioPlayer.src = newSrc;
+      audioSrc = newSrc;
+
+      // Wait for audio to be ready before playing
+      audioPlayer.oncanplay = () => {
+        audioPlayer.play().catch((err) => console.error("Playback failed:", err));
+        audioPlayer.oncanplay = null; // Remove the handler after it's used
+      };
+    } else {
+      // If same song, just play
+      audioPlayer.play().catch((err) => console.error("Playback failed:", err));
+    }
+  }
+
   function togglePlayPause() {
+    if (!currentSong.isPlaying) {
+      playMusic(currentSong.name); // Play the music if it's not playing
+      console.log("Playing audio");
+    } 
+    else {
+      const audioPlayer = document.getElementById("audioPlayer");
+      if (audioPlayer) {
+        audioPlayer.pause(); // Pause if it's playing
+        console.log("Paused audio");
+      }
+    }
     currentSong.isPlaying = !currentSong.isPlaying;
   }
-  
-  function downloadSong(song) {
-    // Implementation for downloading song from search results
-    alert("Downloading song: " + song.name);
-  }
-  
+
+
+  // function handleTorrentOptions(option, torrent) {
+  //   // Implementation for handling torrent options
+  //   alert(`Action '${option}' on torrent: ${torrent.name}`);
+  // }
+  // function handleTorrentOptions(option, torrent) {
+  //   if (option === "play") {
+  //     currentSong = {
+  //       name: torrent.file_name,
+  //       artist: torrent.artist_name,
+  //       genres: ["Unknown"], // or get from metadata if available
+  //       currentTime: "0:00",
+  //       duration: torrent.duration, // Placeholder or extract from metadata
+  //       isPlaying: true,
+  //       progress: 0,
+  //       size: torrent.file_size,
+  //     };
+  //     return;
+  //   }
+  //   if (option === "info") {
+  //     // Implementation for displaying torrent info
+  //     alert(`Torrent info for ${torrent.name}`);
+  //     return;
+  //   }
+  //   alert(`Action '${option}' on torrent: ${torrent.name}`);
+  // }
   function handleTorrentOptions(option, torrent) {
-    // Implementation for handling torrent options
-    alert(`Action '${option}' on torrent: ${torrent.name}`);
+  if (option === "play") {
+    currentSong = {
+      name: torrent.Metadata.file_name,
+      artist: torrent.Metadata.artist_name,
+      genres: ["Unknown"], // or get from metadata if available
+      currentTime: "0:00", // Placeholder or extract from metadata
+      duration: formatDuration(torrent.Metadata.Duration),
+      isPlaying: true,
+      progress: 0,
+      size: formatFileSize(torrent.Metadata.file_size),
+    };
+    togglePlayPause()
+    return;
+  }
+  if (option === "info") {
+    // Display torrent info in a more user-friendly way
+    const createdDate = new Date(torrent.Metadata.CreatedAt).toLocaleString();
+    const infoMessage = `
+      Song Information:
+      
+      Title: ${torrent.Metadata.file_name}
+      Artist: ${torrent.Metadata.artist_name}
+      File Size: ${formatFileSize(torrent.Metadata.file_size)}
+      Duration: ${formatDuration(torrent.Metadata.Duration)}
+      Created: ${createdDate}
+      Available Peers: ${torrent.Metadata.peers ? torrent.Metadata.peers.length : 0}
+    `;
+    alert(infoMessage);
+    return;
+  }
+  alert(`Action '${option}' on torrent: ${torrent.Metadata.file_name}`);
+}
+
+// Helper function to format file size from bytes to human-readable format
+function formatFileSize(bytes) {
+  if (!bytes) return "Unknown";
+  
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = parseInt(bytes);
+  let unitIndex = 0;
+  
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
   }
   
+  return `${size.toFixed(2)} ${units[unitIndex]}`;
+}
+
+// Helper function to format duration from seconds to mm:ss format
+function formatDuration(seconds) {
+  if (!seconds) return "0:00";
+  
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+
   function openSettings() {
     // Implementation for opening settings
     alert("Opening settings dialog");
   }
-  
+
   function stopSeeding() {
     // Implementation for stopping seeding
     alert("Stopping all seeding");
   }
-  
+
   function handleSliderChange(e) {
     // Update song progress based on slider value
     currentSong.progress = e.target.value;
 
     // Calculate time based on percentage
     let totalSeconds = parseDuration(currentSong.duration);
-    let currentSeconds = Math.floor(totalSeconds * (currentSong.progress / 100));
+    let currentSeconds = Math.floor(
+      totalSeconds * (currentSong.progress / 100),
+    );
     currentSong.currentTime = formatTime(currentSeconds);
   }
-  
+
   // Helper function to parse duration string like "3:45" to seconds
   function parseDuration(duration) {
-    const parts = duration.split(':');
+    const parts = duration.split(":");
     return parseInt(parts[0]) * 60 + parseInt(parts[1]);
   }
-  
+
   // Helper function to format seconds to "m:ss" format
   function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   }
 
-  import './index.css'
+  import "./index.css";
+  let fileInput;
 </script>
 
 <main class="min-h-screen bg-[#0f0f0f] text-[#e0e0e0]">
   <Header {stopSeeding} />
-  
+
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
     <div class="md:col-span-2 flex flex-col gap-4">
-      <Search {searchQuery} {searchResults} {handleSearch} {downloadSong} />
-      <Downloads {torrents} {handleTorrentOptions} />
+      <!-- <Search {searchQuery} {searchResults} {handleSearch} {downloadSong} /> -->
+      <Search bind:searchQuery {searchResults} {handleSearch} /> 
+      <Downloads bind:torrents {handleTorrentOptions} />
     </div>
 
     <div class="flex flex-col gap-4 sticky top-4 h-[calc(100vh-2rem)]">
+      <audio id="audioPlayer" src={audioSrc} controls hidden></audio>
       <Player {currentSong} {togglePlayPause} {handleSliderChange} />
       <Library {torrents} {handleTorrentOptions} />
     </div>
