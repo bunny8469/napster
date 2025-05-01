@@ -5,6 +5,10 @@ import {__} from '../models';
 
 export function DownloadFile(arg1:string):Promise<string>;
 
+export function EnableSeeding(arg1:string):Promise<void>;
+
+export function EventEmitter(arg1:string,arg2:any):Promise<void>;
+
 export function GetContributorStatus():Promise<boolean>;
 
 export function GetHttpPort():Promise<string>;
@@ -20,5 +24,7 @@ export function GetTorrents():Promise<Array<client.TorrentInfo>>;
 export function SearchSongs(arg1:string):Promise<Array<__.SongInfo>>;
 
 export function SelectFileAndUpload():Promise<string>;
+
+export function StopSeeding(arg1:string):Promise<void>;
 
 export function UploadFile(arg1:string,arg2:string):Promise<string>;

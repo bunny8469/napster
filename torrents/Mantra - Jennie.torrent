@@ -15,12 +15,11 @@
     "8": "53416ef99f3c4e1080fa3f49e568daa55d32c95ed19ac318cabe7877467b9074"
   },
   "peers": [
-    "localhost:5007",
-    "localhost:5006",
-    "localhost:5008"
+    "localhost:5002",
+    "localhost:5004"
   ],
   "artist_name": "Jennie",
-  "created_at": "2025-04-18T05:10:42+05:30",
+  "created_at": "2025-05-01T07:33:03+05:30",
   "duration": 136,
   "status": ""
 }

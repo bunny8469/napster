@@ -244,6 +244,42 @@ func (s *CentralServer) EnableSeeding(ctx context.Context, req *pb.SeedingReques
 	return &pb.GenResponse{}, nil
 }
 
+func (s *CentralServer) StopSeeding(ctx context.Context, req *pb.SeedingRequest) (*pb.GenResponse, error) {
+	torrent_file := filepath.Join(TORRENTS_DIR, s.fileMap[req.FileName])
+
+	data, err := os.ReadFile(torrent_file)
+	if err != nil {
+		return &pb.GenResponse{}, err
+	}
+
+	var metadata TorrentMetadata
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return &pb.GenResponse{}, err
+	}
+
+	newPeer := req.ClientAddr
+	filteredPeers := make([]string, 0, len(metadata.Peers))
+	for _, peer := range metadata.Peers {
+		if peer != newPeer {
+			filteredPeers = append(filteredPeers, peer)
+		}
+	}
+	metadata.Peers = filteredPeers
+
+	// Marshal back and overwrite the .torrent file
+	updatedData, err := json.MarshalIndent(metadata, "", "  ")
+	if err != nil {
+		log.Printf("Failed to marshal updated torrent: %v", err)
+	} else {
+		err = os.WriteFile(torrent_file, updatedData, 0644)
+		if err != nil {
+			log.Printf("Failed to write updated torrent: %v", err)
+		}
+	}
+
+	return &pb.GenResponse{}, nil
+}
+
 // SearchFile returns a list of peer addresses that host the requested file.
 func (s *CentralServer) SearchFile(ctx context.Context, req *pb.SearchRequest) (*pb.SearchResponse, error) {
 	

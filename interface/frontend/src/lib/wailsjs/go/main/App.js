@@ -6,6 +6,14 @@ export function DownloadFile(arg1) {
   return window['go']['main']['App']['DownloadFile'](arg1);
 }
 
+export function EnableSeeding(arg1) {
+  return window['go']['main']['App']['EnableSeeding'](arg1);
+}
+
+export function EventEmitter(arg1, arg2) {
+  return window['go']['main']['App']['EventEmitter'](arg1, arg2);
+}
+
 export function GetContributorStatus() {
   return window['go']['main']['App']['GetContributorStatus']();
 }
@@ -36,6 +44,10 @@ export function SearchSongs(arg1) {
 
 export function SelectFileAndUpload() {
   return window['go']['main']['App']['SelectFileAndUpload']();
+}
+
+export function StopSeeding(arg1) {
+  return window['go']['main']['App']['StopSeeding'](arg1);
 }
 
 export function UploadFile(arg1, arg2) {

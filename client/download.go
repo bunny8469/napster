@@ -75,7 +75,7 @@ func IsExisting(metadata TorrentMetadata, filename string) bool {
 	return torrentFile
 }
 
-func (p *PeerServer) DownloadFile(filename string, statusCallback func(statusObject DownloadStatus), queueCallback func(metadata TorrentMetadata)) (string) {
+func (p *PeerServer) DownloadFile(filename string) (string) {
 
 	torrent_path := GetTorrent(p.Client, filename)
 	if torrent_path == "" {
@@ -86,25 +86,27 @@ func (p *PeerServer) DownloadFile(filename string, statusCallback func(statusObj
 	if metadata.FileName == "" {
 		return ""
 	}
-	queueCallback(metadata)
+
+	p.EventEmitter("download-queue", metadata)
+
 	time.Sleep(5 * time.Second)
 	
-	statusCallback(DownloadStatus{
+	p.EventEmitter("download-status", DownloadStatus{
 		Filename: filename,
 		Status: "Torrent Parsed",
 	})
 	time.Sleep(5 * time.Second)
 	
 	if IsExisting(metadata, filename) {
-		statusCallback(DownloadStatus{
+		p.EventEmitter("download-status", DownloadStatus{
 			Filename: filename,
-			Status: "Seeding",	// if seeding
+			Status: metadata.Status,	// if seeding
 		})
 		log.Printf("File already exists, and verified with server.")
 		return ""
 	}
 
-	StartDownload(metadata, p.Client, p.PeerAddress, statusCallback)
+	p.StartDownload(metadata, p.Client, p.PeerAddress)
 
 	return ""
 }
@@ -202,7 +204,7 @@ var torrentStatus = struct {
 }{status: make(map[string]string)}
 
 
-func StartDownload(metadata TorrentMetadata, indexingClient pb.CentralServerClient, peerAddr string, statusCallback func(statusObject DownloadStatus)) {
+func (p *PeerServer) StartDownload(metadata TorrentMetadata, indexingClient pb.CentralServerClient, peerAddr string) {
 	numChunks := len(metadata.ChunkChecksums)
 	// peerCount := len(metadata.Peers)
 
@@ -215,7 +217,7 @@ func StartDownload(metadata TorrentMetadata, indexingClient pb.CentralServerClie
 		hashRing: consistent.New(),
 	}
 
-	statusCallback(DownloadStatus{
+	p.EventEmitter("download-status", DownloadStatus{
 		Filename: metadata.FileName,
 		Status: "Downloading",
 	})
@@ -264,7 +266,7 @@ func StartDownload(metadata TorrentMetadata, indexingClient pb.CentralServerClie
 	
 	MoveChunksToStore(metadata.FileName)
 
-	statusCallback(DownloadStatus{
+	p.EventEmitter("download-status", DownloadStatus{
 		Filename: metadata.FileName,
 		Status: "Downloaded",
 	})
@@ -280,7 +282,8 @@ func StartDownload(metadata TorrentMetadata, indexingClient pb.CentralServerClie
 	}
 
 	time.Sleep(5 * time.Second)
-	statusCallback(DownloadStatus{
+
+	p.EventEmitter("download-status", DownloadStatus{
 		Filename: metadata.FileName,
 		Status: "Seeding",
 	})

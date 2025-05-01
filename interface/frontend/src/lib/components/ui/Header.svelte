@@ -8,15 +8,18 @@
 		DropdownMenuItem,
 		DropdownMenuTrigger
 	} from "$lib/components/ui/dropdown-menu";
-	import { GetPeerAddress, SelectFileAndUpload } from "$lib/wailsjs/go/main/App";
+	import { GetPeerAddress, SelectFileAndUpload, GetContributorStatus } from "$lib/wailsjs/go/main/App";
 
 	export let stopSeeding;
 
 	let peerAddress = "";
+	let contributor = false;
 
 	onMount(async () => {
 		try {
 			peerAddress = await GetPeerAddress();
+			contributor = await GetContributorStatus();
+
 		} catch (error) {
 			console.error("Failed to fetch peer address:", error);
 		}
@@ -40,7 +43,7 @@
 		</span>
 	</div>
 	<div class="flex items-center gap-4 text-sm text-[#9e9e9e]">
-		<span class="hidden sm:inline">Peer: {peerAddress}</span>
+		<span class="hidden sm:inline">Peer: {peerAddress} {contributor ? "(Contributor)" : ""}</span>
 		<Button variant="ghost" class="text-[#e0e0e0] hover:bg-[#1a1a1a] hover:text-[#4a86e8]" on:click={handleUploadClick}>Upload Song</Button>
 		<Button variant="ghost" class="text-[#e0e0e0] hover:bg-[#1a1a1a] hover:text-[#4a86e8]" on:click={stopSeeding}>Stop Seeding</Button>
 		<DropdownMenu>

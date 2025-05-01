@@ -27,7 +27,7 @@ import (
 var debug_mode = true
 const CHUNKS_DIR = "./chunks"				// Files being served to other peers
 
-// ChunkSize is defined as 64KB.
+// ChunkSize is defined as 256KB.
 const ChunkSize = 1 << 18
 
 type TorrentMetadata struct {
@@ -43,17 +43,13 @@ type TorrentMetadata struct {
 	Status 		   string 		  `json:"status"`
 }
 
-type AppCallbacks interface {
-	DownloadFile(query string) string
-	UploadFile(filePath string, artist string) string
-}
 
 // PeerServer implements the PeerService for serving file requests and health checks.
 type PeerServer struct {
 	pb.UnimplementedPeerServiceServer
-	PeerAddress string
-	Client		pb.CentralServerClient
-	AppCallbacks AppCallbacks
+	PeerAddress 	string
+	Client			pb.CentralServerClient
+	EventEmitter 	func (eventName string, returnObject any)
 }
 
 // HealthCheck returns alive status.
@@ -126,14 +122,14 @@ func getMP3Duration(filePath string) (int, error) {
 
 // uploadFile streams the file to the central server chunk by chunk,
 // receives renamed file name from server, then saves chunks locally with the new name.
-func (p *PeerServer) UploadFile(localFilePath string, peerAddress string, uploadCallback func(metadata TorrentMetadata)) (string, error) {
+func (p *PeerServer) UploadFile(localFilePath string, peerAddress string) (string, error) {
 
 	file, err := os.Open(localFilePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to open file: %v", err)
 	}
 	
-	metadata, _ := tag.ReadFrom(file)
+	metadata, err := tag.ReadFrom(file)
 	if err != nil {
 		metadata = nil
 	}
@@ -255,7 +251,7 @@ func (p *PeerServer) UploadFile(localFilePath string, peerAddress string, upload
 		return "", err
 	}
 	
-	uploadCallback(metadata_)
+	p.EventEmitter("upload-status", metadata_)
 	mergeChunks(originalBaseName, CHUNKS_DIR, filepath.Join(DOWNLOAD_PATH, originalBaseName))
 
 	fmt.Printf("Chunks stored locally as: %s_chunk_* in ./chunks/\n", originalBaseName)
@@ -263,10 +259,7 @@ func (p *PeerServer) UploadFile(localFilePath string, peerAddress string, upload
 }
 
 func (p *PeerServer) DownloadThisFile(ctx context.Context, req *pb.SearchRequest) (*pb.GenResponse, error) {
-	if p.AppCallbacks != nil {
-		p.AppCallbacks.DownloadFile(req.Query)
-	}
-	
+	p.DownloadFile(req.Query)
 	return &pb.GenResponse{Status: 200}, nil
 }
 

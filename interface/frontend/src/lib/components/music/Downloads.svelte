@@ -118,8 +118,8 @@
                 <DropdownMenuItem class="focus:bg-[#333] focus:text-[#4a86e8]" on:click={() => handleTorrentOptions("pause", torrent)}>
                     {torrent.Status === "Downloading" ? "Pause" : "Resume"}
                 </DropdownMenuItem>
-                <DropdownMenuItem class="focus:bg-[#333] focus:text-[#4a86e8]" on:click={() => handleTorrentOptions("stop", torrent)}>
-                    Stop Seed
+                <DropdownMenuItem class="focus:bg-[#333] focus:text-[#4a86e8]" on:click={() => handleTorrentOptions("toggle-seed", torrent)}>
+                    {torrent.Status === "Downloaded" ? "Enable Seeding" : "Stop Seeding"}
                 </DropdownMenuItem>
                 <DropdownMenuItem class="focus:bg-[#333] focus:text-[#4a86e8]" on:click={() => handleTorrentOptions("info", torrent)}>
                     Details

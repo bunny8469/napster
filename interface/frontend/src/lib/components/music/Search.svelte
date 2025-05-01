@@ -40,7 +40,7 @@
                     <Badge variant="outline" class="text-xs py-0 h-4 bg-[#1a1a1a] border-[#333] text-[#ccc]">Video</Badge>
                     {/if} -->
                 </div>
-                <p class="text-xs text-[#909090]">{song.size}</p>
+                <p class="text-xs text-[#909090]">{song.peers} Peers</p>
                 </div>
             </div>
             <Button variant="ghost" size="icon" class="text-[#909090] hover:text-[#4a86e8] hover:bg-[#1a1a1a]" on:click={() => DownloadFile(song.name)}>

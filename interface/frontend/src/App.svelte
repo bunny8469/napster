@@ -11,6 +11,8 @@
     GetTorrents,
     GetHttpPort,
     GetLibraryTorrents,
+    StopSeeding,
+    EnableSeeding,
   } from "$lib/wailsjs/go/main/App";
   import { onMount } from "svelte";
 
@@ -74,8 +76,8 @@
         id: idx + 1,
         name: song.file_name,
         artist: song.artist_name,
-        size: "unkown", // Placeholder
-        hasVideo: false, // Placeholder or infer from fileName?
+        size: "Unknown",
+        peers: song.peer_addresses.length
       }));
     } catch (err) {
       alert("Search failed: " + (err.message || err));
@@ -89,6 +91,7 @@
     try {
       httpPort = await GetHttpPort();
       console.log("Audio source:", httpPort); // Log the audio source to verify
+      window.addEventListener("keydown", handleKeydown);
     } catch (err) {
       alert("Failed to get audio source: " + (err.message || err));
     }
@@ -187,7 +190,15 @@
       alert(infoMessage);
       return;
     }
-    alert(`Action '${option}' on torrent: ${torrent.Metadata.file_name}`);
+    else if (option === "toggle-seed") {
+      if (torrent.Status == "Downloaded") {
+        EnableSeeding(torrent.Metadata.file_name)
+      }
+      else {
+        StopSeeding(torrent.Metadata.file_name)
+      }
+    }
+    // alert(`Action '${option}' on torrent: ${torrent.Metadata.file_name}`);
   }
 
   // Helper function to format file size from bytes to human-readable format

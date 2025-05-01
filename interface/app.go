@@ -24,7 +24,7 @@ type App struct {
 	peerAddress		string
 	httpPort		string
 	contributor		bool
-	ctx        		context.Context
+	ctx        		context.Context	
 }
 
 func NewApp(address string, httpPort string, contributor bool) *App {
@@ -49,7 +49,7 @@ func NewApp(address string, httpPort string, contributor bool) *App {
 		contributor: contributor,
 	};
 
-	clt.AppCallbacks = app 
+	clt.EventEmitter = app.EventEmitter
 
 	parts := strings.Split(address, ":")
 	port := parts[len(parts)-1] // "50051"
@@ -129,9 +129,7 @@ func (a *App) SearchSongs(query string) []*pb.SongInfo {
 }
 
 func (a *App) UploadFile(filePath string, artist string) string {
-	result, err := a.grpcClient.UploadFile(filePath, a.grpcClient.PeerAddress, func(metadata client.TorrentMetadata) {
-		runtime.EventsEmit(a.ctx, "upload-status", metadata)
-	})
+	result, err := a.grpcClient.UploadFile(filePath, a.grpcClient.PeerAddress)
 	if err != nil {
 		log.Printf("UploadFile error: %v", err)
 		return fmt.Sprintf("Upload failed: %v", err)
@@ -141,17 +139,34 @@ func (a *App) UploadFile(filePath string, artist string) string {
 
 func (a *App) DownloadFile(query string) string {
 
-	result := a.grpcClient.DownloadFile(query, func(statusObject client.DownloadStatus) {
-		runtime.EventsEmit(a.ctx, "download-status", statusObject)
-	}, func(metadata client.TorrentMetadata) {
-		runtime.EventsEmit(a.ctx, "download-queue", metadata)
-	})
+	result := a.grpcClient.DownloadFile(query)
 	return result
 }
 
+func (a *App) EventEmitter(eventName string, returnObject any) {
+	runtime.EventsEmit(a.ctx, eventName, returnObject)
+
+	// additionally, can log all the event emissions here
+}
+
 func (a *App) StopSeeding(query string) {
+	// a.grpcClient.Client -> indexing client (client that is connected to the server)
 	a.grpcClient.Client.StopSeeding(context.Background(), &pb.SeedingRequest{
 		FileName: query, ClientAddr: a.peerAddress,
+	})
+	runtime.EventsEmit(a.ctx, "download-status", client.DownloadStatus{
+		Filename: query,
+		Status: "Downloaded",
+	})
+}
+
+func (a *App) EnableSeeding(query string) {
+	a.grpcClient.Client.EnableSeeding(context.Background(), &pb.SeedingRequest{
+		FileName: query, ClientAddr: a.peerAddress,
+	})
+	runtime.EventsEmit(a.ctx, "download-status", client.DownloadStatus{
+		Filename: query,
+		Status: "Seeding",
 	})
 }
 
